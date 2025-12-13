@@ -1,0 +1,189 @@
+{
+  "onboarding": {
+    "skip": "Atla",
+    "next": "İleri",
+    "getStarted": "Başla",
+    "slide1": {
+      "title": "IYTE56'ya Hoş Geldin",
+      "description": "İYTE öğrencileri için forum uygulaması. Düşüncelerini paylaş, sorular sor ve kampüs topluluğuyla bağlantı kur."
+    },
+    "slide2": {
+      "title": "Gizliliğin Önemli",
+      "description": "Anonim veya açık paylaşım yap - tercih senin. İstediğinde kimliğin korunurken kendini özgürce ifade et."
+    },
+    "slide3": {
+      "title": "Güvenli Topluluk",
+      "description": "Tüm içerikler saygılı bir ortam sağlamak için denetlenir. Anonim gönderiler bile güvenlik için izlenebilir."
+    },
+    "slide4": {
+      "title": "Öğrenci Doğrulaması",
+      "description": "İYTE öğrencisi olduğunuzu doğrulamak için öğrenci e-postanıza (@std.iyte.edu.tr) bir doğrulama bağlantısı göndereceğiz."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Giriş Yap",
+      "subtitle": "Giriş bağlantısı almak için İYTE öğrenci e-postanızı girin",
+      "email": "Öğrenci E-postası",
+      "emailPlaceholder": "ornek@email.com",
+      "sendLink": "Giriş Bağlantısı Gönder",
+      "sending": "Gönderiliyor...",
+      "linkSent": "E-posta Gönderildi",
+      "linkSentMessage": "Giriş bağlantısı e-posta adresinize gönderildi. Lütfen e-postanızı kontrol edin.",
+      "ok": "Tamam",
+      "error": "Hata",
+      "enterEmail": "Lütfen e-posta adresinizi girin",
+      "enterUsername": "Lütfen öğrenci numaranızı girin",
+      "invalidEmail": "Lütfen geçerli bir e-posta adresi girin",
+      "invalidUsername": "Lütfen geçerli bir kullanıcı adı girin (sadece harf, rakam, nokta ve alt çizgi)",
+      "invalidDomain": "Lütfen İYTE öğrenci e-postanızı kullanın",
+      "sendError": "E-posta gönderilirken bir hata oluştu",
+      "studentEmailHint": "İsminizi girin ",
+      "devModeHint": "Geliştirici modu: Gmail kullanıcı adınızı girin"
+    },
+    "setup": {
+      "title": "Profilinizi Tamamlayın",
+      "subtitle": "Başlamak için görünen adınızı ve kullanıcı adınızı belirleyin",
+      "displayName": "Görünen Ad",
+      "displayNamePlaceholder": "Adınızı girin",
+      "username": "Kullanıcı Adı",
+      "usernamePlaceholder": "kullaniciadi",
+      "usernameHint": "3-30 karakter, sadece harf, rakam, nokta ve alt çizgi",
+      "usernameTooShort": "Kullanıcı adı en az 3 karakter olmalıdır",
+      "usernameTooLong": "Kullanıcı adı en fazla 30 karakter olabilir",
+      "invalidUsername": "Kullanıcı adı sadece harf, rakam, nokta ve alt çizgi içerebilir",
+      "usernameTaken": "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin.",
+      "usernameRequired": "Lütfen bir kullanıcı adı girin",
+      "displayNameRequired": "Lütfen görünen adınızı girin",
+      "continue": "Devam Et",
+      "error": "Hata",
+      "updateError": "Profil güncellenemedi. Lütfen tekrar deneyin.",
+      "notSignedIn": "Giriş yapmamışsınız. Lütfen önce giriş yapın."
+    },
+    "verify": {
+      "verifying": "Doğrulanıyor...",
+      "success": "Giriş başarılı!",
+      "redirecting": "Yönlendiriliyorsunuz...",
+      "error": "Hata",
+      "emailNotFound": "E-posta adresi bulunamadı. Lütfen tekrar giriş yapmayı deneyin.",
+      "invalidLink": "Geçersiz bağlantı. Lütfen e-postanızdaki bağlantıyı kullanın.",
+      "signInError": "Giriş yapılırken bir hata oluştu"
+    }
+  },
+  "tabs": {
+    "home": {
+      "title": "Ana Sayfa",
+      "trends": "Trendler",
+      "follows": "Takip",
+      "empty": "Henüz gönderi yok. İlk gönderiyi sen paylaş!"
+    },
+    "notifications": {
+      "title": "Bildirimler",
+      "liked": "gönderinizi beğendi",
+      "commented": "gönderinize yorum yaptı",
+      "replied": "yorumunuza yanıt verdi",
+      "followed": "seni takip etmeye başladı",
+      "empty": "Henüz bildirim yok"
+    },
+    "profile": {
+      "title": "Profil",
+      "editProfile": "Profili Düzenle",
+      "signOut": "Çıkış Yap",
+      "signOutConfirm": "Çıkış Yap",
+      "signOutMessage": "Çıkış yapmak istediğinize emin misiniz?",
+      "cancel": "İptal",
+      "signOutError": "Çıkış yapılırken bir hata oluştu",
+      "tweets": "Gönderiler",
+      "following": "Takip Edilenler",
+      "followers": "Takipçiler",
+      "myPosts": "Gönderiler",
+      "liked": "Beğeniler",
+      "commented": "Yanıtlar",
+      "saved": "Kaydedilenler",
+      "noPosts": "Henüz gönderi yok",
+      "noLikedPosts": "Henüz beğenilen gönderi yok",
+      "noCommentedPosts": "Henüz yanıtlanan gönderi yok",
+      "noSavedPosts": "Henüz kaydedilen gönderi yok"
+    }
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "account": "Hesap",
+    "editProfile": "Profili Düzenle",
+    "app": "Uygulama",
+    "appSettings": "Uygulama Ayarları",
+    "language": "Dil",
+    "selectLanguage": "Dil Seçin",
+    "theme": "Tema",
+    "selectTheme": "Tema Seçin",
+    "checkEmail": "IYTE E-Posta Kontrol Et"
+  },
+  "editProfile": {
+    "title": "Profili Düzenle",
+    "save": "Kaydet",
+    "displayName": "Görünen Ad",
+    "displayNamePlaceholder": "Adınızı girin",
+    "username": "Kullanıcı Adı",
+    "usernamePlaceholder": "Kullanıcı adınızı girin",
+    "bio": "Biyografi",
+    "bioPlaceholder": "Kendinizden bahsedin",
+    "saveError": "Profil kaydedilemedi. Lütfen tekrar deneyin."
+  },
+  "addPost": {
+    "post": "Paylaş",
+    "placeholder": "Neler oluyor?",
+    "anonymous": "Anonim",
+    "user": "Kullanıcı",
+    "postAnonymously": "Anonim olarak paylaş",
+    "anonymousNote": "Kimliğiniz diğer kullanıcılardan gizlenecek, ancak hesap bilgileriniz moderasyon amaçlı saklanmaya devam edecek.",
+    "permissionDenied": "İzin Reddedildi",
+    "permissionMessage": "Resim eklemek için fotoğraf kitaplığınıza erişim izni verin.",
+    "submitError": "Gönderi oluşturulamadı. Lütfen tekrar deneyin.",
+    "discardTitle": "Gönderiyi Sil?",
+    "discardMessage": "Bu gönderiyi silmek istediğinizden emin misiniz?",
+    "discard": "Sil"
+  },
+  "postDetail": {
+    "title": "Gönderi",
+    "comments": "Yorumlar",
+    "noComments": "Henüz yorum yok. İlk yorumu sen yap!",
+    "commentPlaceholder": "Yorum yaz...",
+    "replyPlaceholder": "Yanıt yaz...",
+    "replyingTo": "Yanıtlanıyor",
+    "viewReplies": "Yanıtları gör",
+    "hideReplies": "Yanıtları gizle",
+    "noReplies": "Henüz yanıt yok",
+    "repliesError": "Yanıtlar yüklenemedi",
+    "loadMoreReplies": "Daha fazla yanıt yükle",
+    "commentError": "Yorum gönderilemedi. Lütfen tekrar deneyin.",
+    "notFound": "Gönderi bulunamadı"
+  },
+  "reportPost": {
+    "title": "Gönderiyi Bildir",
+    "subtitle": "Bu gönderiyi neden bildiriyorsunuz?",
+    "selectReason": "Lütfen bir neden seçin",
+    "descriptionLabel": "Ek detaylar",
+    "descriptionPlaceholder": "Daha fazla bağlam sağlayın (isteğe bağlı)",
+    "submit": "Raporu Gönder",
+    "success": "Rapor Gönderildi",
+    "successMessage": "Raporunuz için teşekkürler. Kısa süre içinde inceleyeceğiz.",
+    "error": "Rapor gönderilemedi. Lütfen tekrar deneyin."
+  },
+  "warning": {
+    "title": "Uyarı",
+    "understand": "Anladım",
+    "banWarning": "{{count}} uyarı daha ve hesabınız yasaklanacak",
+    "finalWarning": "Bu son uyarınız. 3 uyarıdan sonra hesabınız yasaklanacak."
+  },
+  "common": {
+    "error": "Bir hata oluştu",
+    "ok": "Tamam",
+    "cancel": "İptal",
+    "retry": "Tekrar Dene",
+    "optional": "İsteğe Bağlı"
+  },
+  "postOptions": {
+    "delete": "Sil",
+    "report": "Şikayet Et"
+  }
+}

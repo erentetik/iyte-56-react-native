@@ -1,0 +1,189 @@
+{
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "getStarted": "Get Started",
+    "slide1": {
+      "title": "Welcome to IYTE56",
+      "description": "The forum app for IYTE students. Share your thoughts, ask questions, and connect with your campus community."
+    },
+    "slide2": {
+      "title": "Your Privacy Matters",
+      "description": "Post anonymously or publicly - it's your choice. Express yourself freely while your identity stays protected when you choose."
+    },
+    "slide3": {
+      "title": "Safe Community",
+      "description": "All content is moderated to ensure a respectful environment. Even anonymous posts are traceable for safety purposes."
+    },
+    "slide4": {
+      "title": "Student Verification",
+      "description": "To ensure you're an IYTE student, we'll send a verification link to your student email (@std.iyte.edu.tr)."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "subtitle": "Enter your IYTE student email to receive a sign-in link",
+      "email": "Student Email",
+      "emailPlaceholder": "example@email.com",
+      "sendLink": "Send Sign In Link",
+      "sending": "Sending...",
+      "linkSent": "Email Sent",
+      "linkSentMessage": "Sign in link has been sent to your email address. Please check your email.",
+      "ok": "OK",
+      "error": "Error",
+      "enterEmail": "Please enter your email address",
+      "enterUsername": "Please enter your student number",
+      "invalidEmail": "Please enter a valid email address",
+      "invalidUsername": "Please enter a valid username (letters, numbers, dots and underscores only)",
+      "invalidDomain": "Please use your IYTE student email",
+      "sendError": "An error occurred while sending the email",
+      "studentEmailHint": "Enter your name",
+      "devModeHint": "Dev mode: Enter your Gmail username"
+    },
+    "setup": {
+      "title": "Complete Your Profile",
+      "subtitle": "Set your display name and username to get started",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "Enter your name",
+      "username": "Username",
+      "usernamePlaceholder": "username",
+      "usernameHint": "3-30 characters, letters, numbers, dots and underscores only",
+      "usernameTooShort": "Username must be at least 3 characters",
+      "usernameTooLong": "Username must be 30 characters or less",
+      "invalidUsername": "Username can only contain letters, numbers, dots and underscores",
+      "usernameTaken": "This username is already taken. Please choose another.",
+      "usernameRequired": "Please enter a username",
+      "displayNameRequired": "Please enter your display name",
+      "continue": "Continue",
+      "error": "Error",
+      "updateError": "Failed to update profile. Please try again.",
+      "notSignedIn": "You are not signed in. Please sign in first."
+    },
+    "verify": {
+      "verifying": "Verifying...",
+      "success": "Sign in successful!",
+      "redirecting": "Redirecting...",
+      "error": "Error",
+      "emailNotFound": "Email address not found. Please try signing in again.",
+      "invalidLink": "Invalid link. Please use the link from your email.",
+      "signInError": "An error occurred while signing in"
+    }
+  },
+  "tabs": {
+    "home": {
+      "title": "Home",
+      "trends": "Trends",
+      "follows": "Follows",
+      "empty": "No posts yet. Be the first to post!"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "liked": "liked your post",
+      "commented": "commented on your post",
+      "replied": "replied to your comment",
+      "followed": "started following you",
+      "empty": "No notifications yet"
+    },
+    "profile": {
+      "title": "Profile",
+      "editProfile": "Edit Profile",
+      "signOut": "Sign Out",
+      "signOutConfirm": "Sign Out",
+      "signOutMessage": "Are you sure you want to sign out?",
+      "cancel": "Cancel",
+      "signOutError": "An error occurred while signing out",
+      "tweets": "Posts",
+      "following": "Following",
+      "followers": "Followers",
+      "myPosts": "Posts",
+      "liked": "Liked",
+      "commented": "Replied",
+      "saved": "Saved",
+      "noPosts": "No posts yet",
+      "noLikedPosts": "No liked posts yet",
+      "noCommentedPosts": "No commented posts yet",
+      "noSavedPosts": "No saved posts yet"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "editProfile": "Edit Profile",
+    "app": "App",
+    "appSettings": "App Settings",
+    "language": "Language",
+    "selectLanguage": "Select Language",
+    "theme": "Theme",
+    "selectTheme": "Select Theme",
+    "checkEmail": "Check IYTE Email"
+  },
+  "editProfile": {
+    "title": "Edit Profile",
+    "save": "Save",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Enter your name",
+    "username": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us about yourself",
+    "saveError": "Failed to save profile. Please try again."
+  },
+  "addPost": {
+    "post": "Post",
+    "placeholder": "What's happening?",
+    "anonymous": "Anonymous",
+    "user": "User",
+    "postAnonymously": "Post anonymously",
+    "anonymousNote": "Your identity will be hidden from other users, but your account info is still stored for moderation purposes.",
+    "permissionDenied": "Permission Denied",
+    "permissionMessage": "Please allow access to your photo library to add images.",
+    "submitError": "Failed to create post. Please try again.",
+    "discardTitle": "Discard Post?",
+    "discardMessage": "Are you sure you want to discard this post?",
+    "discard": "Discard"
+  },
+  "postDetail": {
+    "title": "Post",
+    "comments": "Comments",
+    "noComments": "No comments yet. Be the first to comment!",
+    "commentPlaceholder": "Write a comment...",
+    "replyPlaceholder": "Write a reply...",
+    "replyingTo": "Replying to",
+    "viewReplies": "View replies",
+    "hideReplies": "Hide replies",
+    "noReplies": "No replies yet",
+    "repliesError": "Failed to load replies",
+    "loadMoreReplies": "Load more replies",
+    "commentError": "Failed to post comment. Please try again.",
+    "notFound": "Post not found"
+  },
+  "reportPost": {
+    "title": "Report Post",
+    "subtitle": "Why are you reporting this post?",
+    "selectReason": "Please select a reason",
+    "descriptionLabel": "Additional details",
+    "descriptionPlaceholder": "Provide more context (optional)",
+    "submit": "Submit Report",
+    "success": "Report Submitted",
+    "successMessage": "Thank you for your report. We'll review it shortly.",
+    "error": "Failed to submit report. Please try again."
+  },
+  "warning": {
+    "title": "Warning",
+    "understand": "I Understand",
+    "banWarning": "{{count}} more warning{{plural}} and your account will be banned",
+    "finalWarning": "This is your final warning. Your account will be banned after 3 warnings."
+  },
+  "common": {
+    "error": "An error occurred",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "retry": "Try Again",
+    "optional": "Optional"
+  },
+  "postOptions": {
+    "delete": "Delete",
+    "report": "Report"
+  }
+}
