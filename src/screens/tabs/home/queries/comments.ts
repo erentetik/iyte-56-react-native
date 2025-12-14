@@ -62,7 +62,7 @@ export async function getPostComments(
   })) as CommentDocument[];
   
   const comments = allComments
-    .filter(c => !c.parentCommentId && !c.isDeleted && !c.isHidden)
+    .filter(c => !c.parentCommentId && !c.isDeleted && !c.isHidden && c.moderationChecked === true)
     .slice(0, COMMENTS_PER_PAGE);
   
   const newLastDoc = snapshot.docs.length > 0 
@@ -109,7 +109,7 @@ export async function getCommentReplies(
     })) as CommentDocument[];
     
     const comments = allComments
-      .filter(c => !c.isDeleted && !c.isHidden)
+      .filter(c => !c.isDeleted && !c.isHidden && c.moderationChecked === true)
       .slice(0, COMMENTS_PER_PAGE);
     
     console.log('getCommentReplies - filtered comments count:', comments.length);
@@ -237,6 +237,22 @@ export async function getUserCommentedPostIds(userId: string): Promise<string[]>
   return Array.from(postIds);
 }
 
+/**
+ * Get total count of comments by a user
+ */
+export async function getUserCommentsCount(userId: string): Promise<number> {
+  const commentsRef = collection(db, COLLECTIONS.COMMENTS);
+  
+  const q = query(
+    commentsRef,
+    where('authorId', '==', userId),
+    where('isDeleted', '==', false)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.size;
+}
+
 // ============================================================================
 // COMMENT MUTATIONS
 // ============================================================================
@@ -274,7 +290,7 @@ export async function createComment(
     // Author info (denormalized)
     authorId: author.id,
     authorUsername: author.username || 'user',
-    authorDisplayName: author.displayName || 'User',
+    authorDisplayName: author.username || 'user', // Use username instead of displayName
     authorIsVerified: author.isVerified || false,
     authorIsAdmin: author.isAdmin || false,
     
@@ -339,7 +355,7 @@ export async function createComment(
             type: 'reply',
             actorId: author.id,
             actorUsername: author.username || 'user',
-            actorDisplayName: author.displayName || 'User',
+            actorDisplayName: author.username || 'user', // Use username instead of displayName
             postId: postId,
             commentId: docRef.id,
             postContent: postData?.content?.substring(0, 100) || '',
@@ -375,7 +391,7 @@ export async function createComment(
             type: 'comment',
             actorId: author.id,
             actorUsername: author.username || 'user',
-            actorDisplayName: author.displayName || 'User',
+            actorDisplayName: author.username || 'user', // Use username instead of displayName
             postId: postId,
             commentId: docRef.id,
             postContent: postData.content?.substring(0, 100) || '',

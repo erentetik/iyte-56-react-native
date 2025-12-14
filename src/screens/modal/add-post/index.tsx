@@ -8,18 +8,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../../components/ui/avatar';
@@ -197,9 +197,6 @@ export function AddPostScreen() {
               size={48}
             />
             <View style={styles.authorInfo}>
-              <Text style={[styles.authorName, { color: colors.neutral[12] }]}>
-                {isAnonymous ? t('addPost.anonymous') : (userProfile?.displayName || t('addPost.user'))}
-              </Text>
               <Text style={[styles.authorUsername, { color: colors.neutral[9] }]}>
                 @{isAnonymous ? t('common.anonymousUsername') : (userProfile?.username || t('common.user'))}
               </Text>

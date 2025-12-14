@@ -72,7 +72,7 @@ function postToTweet(
     id: post.id,
     author: {
       id: post.authorId,
-      name: post.authorDisplayName,
+      name: post.authorUsername,
       username: post.authorUsername,
       avatar: post.authorAvatar,
       isAdmin: post.authorIsAdmin,
@@ -270,8 +270,7 @@ export function HomeScreen() {
     return posts.filter(
       (post) =>
         post.content.toLowerCase().includes(query) ||
-        post.authorUsername.toLowerCase().includes(query) ||
-        post.authorDisplayName.toLowerCase().includes(query)
+        post.authorUsername.toLowerCase().includes(query)
     );
   }, [posts, searchQuery]);
   
@@ -367,7 +366,7 @@ export function HomeScreen() {
     const author: UserDocument = {
       id: post.authorId,
       username: post.authorUsername,
-      displayName: post.authorDisplayName,
+      displayName: post.authorUsername, // Keep for type compatibility but use username
       email: '',
       postsCount: 0,
       followersCount: 0,

@@ -5,13 +5,16 @@
  */
 
 import {
-  checkUserLikesForPosts,
-  getPostLikes,
-  getUserLikedPosts,
-  hasUserLikedPost,
-  toggleLike,
+    checkUserLikesForComments,
+    checkUserLikesForPosts,
+    getPostLikes,
+    getUserLikedPosts,
+    hasUserLikedComment,
+    hasUserLikedPost,
+    toggleCommentLike,
+    toggleLike,
 } from '@/screens/tabs/home/queries/likes';
-import { PostDocument, UserDocument } from '@/types/firestore';
+import { CommentDocument, PostDocument, UserDocument } from '@/types/firestore';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './query-client';
 
@@ -266,6 +269,147 @@ export function useToggleLike() {
           const key = query.queryKey as readonly unknown[];
           return Array.isArray(key) && key.includes('batch') && key.includes(user.id);
         },
+      });
+    },
+  });
+}
+
+// ============================================================================
+// COMMENT LIKES
+// ============================================================================
+
+/**
+ * Hook to check if user has liked a specific comment
+ */
+export function useHasLikedComment(commentId: string, userId: string | undefined) {
+  return useQuery({
+    queryKey: [...queryKeys.likes.all, 'comment', commentId, userId || ''],
+    queryFn: () => hasUserLikedComment(commentId, userId!),
+    enabled: !!commentId && !!userId,
+    staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+/**
+ * Hook to batch check likes for multiple comments
+ */
+export function useBatchCommentLikeCheck(commentIds: string[], userId: string | undefined) {
+  return useQuery({
+    queryKey: [...queryKeys.likes.all, 'comment', 'batch', userId || '', commentIds.sort().join(',')],
+    queryFn: () => checkUserLikesForComments(commentIds, userId!),
+    enabled: commentIds.length > 0 && !!userId,
+    staleTime: 60 * 1000,
+    placeholderData: new Set<string>(),
+  });
+}
+
+/**
+ * Hook for toggling like on a comment with optimistic updates
+ */
+export function useToggleCommentLike() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ commentId, user }: { commentId: string; user: UserDocument }) => {
+      return toggleCommentLike(commentId, user);
+    },
+    onMutate: async ({ commentId, user }) => {
+      await queryClient.cancelQueries({ 
+        queryKey: [...queryKeys.likes.all, 'comment', commentId, user.id] 
+      });
+      
+      const previousLikeStatus = queryClient.getQueryData<boolean>(
+        [...queryKeys.likes.all, 'comment', commentId, user.id]
+      );
+      
+      const newLikeStatus = !previousLikeStatus;
+      queryClient.setQueryData(
+        [...queryKeys.likes.all, 'comment', commentId, user.id],
+        newLikeStatus
+      );
+      
+      // Update comment like count in all comment queries
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.comments.all },
+        (old: any) => {
+          if (!old) return old;
+          
+          const updateCommentInData = (data: any): any => {
+            if (!data) return data;
+            
+            // Handle infinite query structure
+            if (data.pages && Array.isArray(data.pages)) {
+              const updatedPages = data.pages.map((page: any) => {
+                if (!page.comments || !Array.isArray(page.comments)) return page;
+                
+                const commentIndex = page.comments.findIndex((c: CommentDocument) => c.id === commentId);
+                if (commentIndex === -1) return page;
+                
+                const updatedComments = [...page.comments];
+                const currentComment = updatedComments[commentIndex];
+                updatedComments[commentIndex] = {
+                  ...currentComment,
+                  likesCount: Math.max(0, currentComment.likesCount + (newLikeStatus ? 1 : -1)),
+                };
+                
+                return {
+                  ...page,
+                  comments: updatedComments,
+                };
+              });
+              
+              return {
+                ...data,
+                pages: updatedPages,
+              };
+            }
+            
+            // Handle array of comments
+            if (Array.isArray(data)) {
+              const commentIndex = data.findIndex((c: CommentDocument) => c.id === commentId);
+              if (commentIndex === -1) return data;
+              
+              const updatedComments = [...data];
+              const currentComment = updatedComments[commentIndex];
+              updatedComments[commentIndex] = {
+                ...currentComment,
+                likesCount: Math.max(0, currentComment.likesCount + (newLikeStatus ? 1 : -1)),
+              };
+              
+              return updatedComments;
+            }
+            
+            // Handle single comment
+            if (data.id === commentId) {
+              return {
+                ...data,
+                likesCount: Math.max(0, data.likesCount + (newLikeStatus ? 1 : -1)),
+              };
+            }
+            
+            return data;
+          };
+          
+          return updateCommentInData(old);
+        }
+      );
+      
+      return { previousLikeStatus };
+    },
+    onError: (err, { commentId, user }, context) => {
+      if (context?.previousLikeStatus !== undefined) {
+        queryClient.setQueryData(
+          [...queryKeys.likes.all, 'comment', commentId, user.id],
+          context.previousLikeStatus
+        );
+      }
+    },
+    onSettled: (_, __, { commentId, user }) => {
+      queryClient.invalidateQueries({ 
+        queryKey: [...queryKeys.likes.all, 'comment', commentId, user.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.comments.all 
       });
     },
   });

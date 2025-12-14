@@ -95,15 +95,15 @@ export function PostOptionsModal({
                     </Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  style={[styles.option, { borderBottomColor: colors.neutral[6] }]}
-                  onPress={handleReport}
-                >
-                  <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.orange[9]} />
-                  <Text style={[styles.optionText, { color: colors.neutral[12] }]}>
-                    {t('postOptions.report')}
-                  </Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.option, { borderBottomColor: colors.neutral[6] }]}
+                onPress={handleReport}
+              >
+                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.orange[9]} />
+                <Text style={[styles.optionText, { color: colors.neutral[12] }]}>
+                  {t('postOptions.report')}
+                </Text>
+              </TouchableOpacity>
               </>
             )}
             <TouchableOpacity

@@ -16,18 +16,18 @@ import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -217,9 +217,6 @@ export function AddPostScreen() {
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
           {/* Author Info */}
           <View style={styles.authorRow}>
-            <Text style={[styles.authorName, { color: colors.neutral[12] }]}>
-              {isAnonymous ? t('addPost.anonymous') : (userProfile?.displayName || t('addPost.user'))}
-            </Text>
             <Text style={[styles.authorUsername, { color: colors.orange[9] }]}>
               @{isAnonymous ? 'anonymous' : (userProfile?.username || 'user')}
             </Text>

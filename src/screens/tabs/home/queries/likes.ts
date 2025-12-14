@@ -143,7 +143,7 @@ export async function likePost(
     postId,
     userId: user.id,
     username: user.username,
-    displayName: user.displayName,
+    displayName: user.username, // Keep for type compatibility but use username
     createdAt: serverTimestamp(),
   };
   
@@ -168,7 +168,7 @@ export async function likePost(
           type: 'like',
           actorId: user.id,
           actorUsername: user.username,
-          actorDisplayName: user.displayName,
+          actorDisplayName: user.username, // Use username instead of displayName
           postId: postId,
           postContent: postData.content.substring(0, 100),
         };
@@ -229,4 +229,140 @@ export async function toggleLike(
     await likePost(postId, user);
     return true;
   }
+}
+
+// ============================================================================
+// COMMENT LIKES
+// ============================================================================
+
+/**
+ * Check if a user has liked a comment
+ */
+export async function hasUserLikedComment(
+  commentId: string,
+  userId: string
+): Promise<boolean> {
+  const likeId = `${commentId}_${userId}`;
+  const likeRef = doc(db, COLLECTIONS.COMMENT_LIKES, likeId);
+  const likeSnap = await getDoc(likeRef);
+  return likeSnap.exists();
+}
+
+/**
+ * Like a comment
+ */
+export async function likeComment(
+  commentId: string,
+  user: UserDocument
+): Promise<void> {
+  const likeId = `${commentId}_${user.id}`;
+  const likeRef = doc(db, COLLECTIONS.COMMENT_LIKES, likeId);
+  
+  // Check if already liked
+  const existingLike = await getDoc(likeRef);
+  if (existingLike.exists()) {
+    return; // Already liked
+  }
+  
+  const likeData: Record<string, any> = {
+    id: likeId,
+    commentId,
+    userId: user.id,
+    username: user.username,
+    displayName: user.username, // Keep for type compatibility but use username
+    createdAt: serverTimestamp(),
+  };
+  
+  // Only include avatar if it exists
+  if (user.avatar) {
+    likeData.avatar = user.avatar;
+  }
+  
+  await setDoc(likeRef, likeData);
+  
+  // Get comment to get author info
+  const commentRef = doc(db, COLLECTIONS.COMMENTS, commentId);
+  const commentSnap = await getDoc(commentRef);
+  
+  // Increment comment like count
+  await updateDoc(commentRef, {
+    likesCount: increment(1),
+  });
+  
+  // Note: Comment likes don't create notifications (unlike post likes)
+  // as they would be too noisy
+}
+
+/**
+ * Unlike a comment
+ */
+export async function unlikeComment(
+  commentId: string,
+  userId: string
+): Promise<void> {
+  const likeId = `${commentId}_${userId}`;
+  const likeRef = doc(db, COLLECTIONS.COMMENT_LIKES, likeId);
+  
+  // Check if like exists
+  const existingLike = await getDoc(likeRef);
+  if (!existingLike.exists()) {
+    return; // Not liked
+  }
+  
+  await deleteDoc(likeRef);
+  
+  // Decrement comment like count
+  const commentRef = doc(db, COLLECTIONS.COMMENTS, commentId);
+  await updateDoc(commentRef, {
+    likesCount: increment(-1),
+  });
+}
+
+/**
+ * Toggle like status on a comment
+ */
+export async function toggleCommentLike(
+  commentId: string,
+  user: UserDocument
+): Promise<boolean> {
+  const isLiked = await hasUserLikedComment(commentId, user.id);
+  
+  if (isLiked) {
+    await unlikeComment(commentId, user.id);
+    return false;
+  } else {
+    await likeComment(commentId, user);
+    return true;
+  }
+}
+
+/**
+ * Check multiple comments for likes by a user (batch check)
+ */
+export async function checkUserLikesForComments(
+  commentIds: string[],
+  userId: string
+): Promise<Set<string>> {
+  if (commentIds.length === 0) return new Set();
+  
+  const likesRef = collection(db, COLLECTIONS.COMMENT_LIKES);
+  const likedCommentIds = new Set<string>();
+  
+  // Batch in groups of 10 (Firestore 'in' limit)
+  for (let i = 0; i < commentIds.length; i += 10) {
+    const batch = commentIds.slice(i, i + 10);
+    
+    const q = query(
+      likesRef,
+      where('commentId', 'in', batch),
+      where('userId', '==', userId)
+    );
+    
+    const snapshot = await getDocs(q);
+    snapshot.docs.forEach(doc => {
+      likedCommentIds.add(doc.data().commentId as string);
+    });
+  }
+  
+  return likedCommentIds;
 }

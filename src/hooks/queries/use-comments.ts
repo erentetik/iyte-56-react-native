@@ -13,6 +13,7 @@ import {
     getCommentReplies,
     getPostComments,
     getUserCommentedPostIds,
+    getUserCommentsCount,
     updateComment,
 } from '@/screens/tabs/home/queries/comments';
 import { CommentDocument, UserDocument } from '@/types/firestore';
@@ -96,6 +97,18 @@ export function useUserCommentedPostIds(userId: string) {
   });
 }
 
+/**
+ * Hook to get total count of comments by a user
+ */
+export function useUserCommentsCount(userId: string | undefined) {
+  return useQuery({
+    queryKey: [...queryKeys.comments.all, 'userCount', userId || ''],
+    queryFn: () => getUserCommentsCount(userId!),
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
 // ============================================================================
 // COMMENT MUTATIONS
 // ============================================================================
@@ -136,7 +149,7 @@ export function useCreateComment() {
         content: input.content,
         authorId: author.id,
         authorUsername: author.username || 'user',
-        authorDisplayName: author.displayName || 'User',
+        authorDisplayName: author.username || 'user', // Use username instead of displayName
         authorIsVerified: author.isVerified || false,
         authorIsAdmin: author.isAdmin || false,
         parentCommentId: input.parentCommentId,

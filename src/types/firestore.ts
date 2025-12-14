@@ -96,6 +96,10 @@ export interface PostDocument {
   visibility: 'public' | 'followers' | 'private';
   isDeleted: boolean;            // Soft delete flag
   isHidden: boolean;             // Hidden by moderation
+  moderationChecked?: boolean;   // Whether content has been checked by moderation
+  moderationCheckedAt?: Timestamp; // When moderation check was performed
+  moderationDetails?: Record<string, any>; // Moderation details (categories, scores)
+  moderationError?: string;     // Error message if moderation failed
   reportCount: number;           // Number of reports
   
   // Timestamps
@@ -133,6 +137,10 @@ export interface CommentDocument {
   // Moderation
   isDeleted: boolean;            // Soft delete flag
   isHidden: boolean;             // Hidden by moderation
+  moderationChecked?: boolean;   // Whether content has been checked by moderation
+  moderationCheckedAt?: Timestamp; // When moderation check was performed
+  moderationDetails?: Record<string, any>; // Moderation details (categories, scores)
+  moderationError?: string;     // Error message if moderation failed
   reportCount: number;           // Number of reports
   
   // Timestamps
@@ -310,6 +318,7 @@ export const COLLECTIONS = {
   POSTS: 'posts',
   COMMENTS: 'comments',
   POST_LIKES: 'post_likes',
+  COMMENT_LIKES: 'comment_likes',
   SAVED_POSTS: 'saved_posts',
   FOLLOWS: 'follows',
   MODERATION_QUEUE: 'moderation_queue',

@@ -24,9 +24,10 @@ Alternatively, when a query fails due to a missing index, Firebase will show a l
 | `visibility` | Ascending |
 | `isDeleted` | Ascending |
 | `isHidden` | Ascending |
+| `moderationChecked` | Ascending |
 | `createdAt` | Descending |
 
-**Purpose:** Fetching the public feed with non-deleted, non-hidden posts sorted by newest first.
+**Purpose:** Fetching the public feed with non-deleted, non-hidden, moderation-checked posts sorted by newest first.
 
 ---
 
@@ -39,10 +40,11 @@ Alternatively, when a query fails due to a missing index, Firebase will show a l
 | `visibility` | Ascending |
 | `isDeleted` | Ascending |
 | `isHidden` | Ascending |
+| `moderationChecked` | Ascending |
 | `popularityScore` | Descending |
 | `createdAt` | Descending |
 
-**Purpose:** Fetching the featured feed with posts sorted by `popularityScore` (calculated score) then by creation date. The `popularityScore` should be updated by a Cloud Function based on likes, comments, views, etc.
+**Purpose:** Fetching the featured feed with posts sorted by `popularityScore` (calculated score) then by creation date. The `popularityScore` should be updated by a Cloud Function based on likes, comments, views, etc. Only shows moderation-checked posts.
 
 ---
 
@@ -54,9 +56,26 @@ Alternatively, when a query fails due to a missing index, Firebase will show a l
 |-------|-------|
 | `authorId` | Ascending |
 | `isDeleted` | Ascending |
+| `moderationChecked` | Ascending |
 | `createdAt` | Descending |
 
-**Purpose:** Fetching a user's posts for their profile page.
+**Purpose:** Fetching a user's posts for their profile page. Only shows moderation-checked posts.
+
+---
+
+### 2b. Posts - Following Feed ⚠️ REQUIRED
+
+**Collection:** `posts`
+
+| Field | Order |
+|-------|-------|
+| `authorId` | Ascending |
+| `isDeleted` | Ascending |
+| `isHidden` | Ascending |
+| `moderationChecked` | Ascending |
+| `createdAt` | Descending |
+
+**Purpose:** Fetching posts from users that the current user follows. Only shows moderation-checked, non-hidden posts.
 
 ---
 
@@ -205,6 +224,19 @@ You can also deploy indexes using Firebase CLI. Create a `firestore.indexes.json
         { "fieldPath": "visibility", "order": "ASCENDING" },
         { "fieldPath": "isDeleted", "order": "ASCENDING" },
         { "fieldPath": "isHidden", "order": "ASCENDING" },
+        { "fieldPath": "moderationChecked", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "isHidden", "order": "ASCENDING" },
+        { "fieldPath": "moderationChecked", "order": "ASCENDING" },
+        { "fieldPath": "popularityScore", "order": "DESCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
@@ -214,6 +246,18 @@ You can also deploy indexes using Firebase CLI. Create a `firestore.indexes.json
       "fields": [
         { "fieldPath": "authorId", "order": "ASCENDING" },
         { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "moderationChecked", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "isHidden", "order": "ASCENDING" },
+        { "fieldPath": "moderationChecked", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },

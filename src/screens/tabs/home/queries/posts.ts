@@ -7,22 +7,22 @@
 import { db } from '@/config/firebase';
 import { COLLECTIONS, PostDocument, UserDocument } from '@/types/firestore';
 import {
-    addDoc,
-    collection,
-    doc,
-    DocumentData,
-    getDoc,
-    getDocs,
-    increment,
-    limit,
-    orderBy,
-    query,
-    QueryDocumentSnapshot,
-    serverTimestamp,
-    startAfter,
-    Timestamp,
-    updateDoc,
-    where,
+  addDoc,
+  collection,
+  doc,
+  DocumentData,
+  getDoc,
+  getDocs,
+  increment,
+  limit,
+  orderBy,
+  query,
+  QueryDocumentSnapshot,
+  serverTimestamp,
+  startAfter,
+  Timestamp,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 
 const POSTS_PER_PAGE = 10;
@@ -46,6 +46,7 @@ export async function getLatestFeed(
     where('visibility', '==', 'public'),
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
+    where('moderationChecked', '==', true), // Only show checked content
     orderBy('createdAt', 'desc'),
     limit(POSTS_PER_PAGE * 2) // Fetch more to account for filtering
   );
@@ -93,6 +94,7 @@ export async function getFeaturedFeed(
     where('visibility', '==', 'public'),
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
+    where('moderationChecked', '==', true), // Only show checked content
     orderBy('popularityScore', 'desc'),
     orderBy('createdAt', 'desc'),
     limit(POSTS_PER_PAGE * 2) // Fetch more to account for filtering
@@ -169,6 +171,7 @@ export async function getFollowingFeed(
     where('authorId', 'in', limitedFollowingIds),
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
+    where('moderationChecked', '==', true), // Only show checked content
     orderBy('createdAt', 'desc'),
     limit(POSTS_PER_PAGE)
   );

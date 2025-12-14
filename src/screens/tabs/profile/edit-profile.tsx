@@ -35,16 +35,14 @@ export function EditProfileScreen() {
   
   const { data: userProfile, isLoading } = useUser(user?.uid);
   
-  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
+  // const [bio, setBio] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
-      setDisplayName(userProfile.displayName || '');
       setUsername(userProfile.username || '');
-      setBio(userProfile.bio || '');
+      // setBio(userProfile.bio || '');
     }
   }, [userProfile]);
 
@@ -54,9 +52,8 @@ export function EditProfileScreen() {
     setIsSaving(true);
     try {
       await updateUser(user.uid, {
-        displayName: displayName.trim(),
         username: username.trim().toLowerCase(),
-        bio: bio.trim(),
+        // bio: bio.trim(),
       });
       router.back();
     } catch {
@@ -66,7 +63,7 @@ export function EditProfileScreen() {
     }
   };
 
-  const canSave = displayName.trim().length > 0 && username.trim().length > 0;
+  const canSave = username.trim().length > 0;
 
   if (isLoading) {
     return (
@@ -122,27 +119,6 @@ export function EditProfileScreen() {
           <View style={styles.form}>
             <View style={styles.field}>
               <Text style={[styles.label, { color: colors.neutral[9] }]}>
-                {t('editProfile.displayName')}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.neutral[2],
-                    color: colors.neutral[12],
-                    borderColor: colors.neutral[6],
-                  },
-                ]}
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder={t('editProfile.displayNamePlaceholder')}
-                placeholderTextColor={colors.neutral[8]}
-                maxLength={50}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.neutral[9] }]}>
                 {t('editProfile.username')}
               </Text>
               <TextInput
@@ -163,7 +139,7 @@ export function EditProfileScreen() {
               />
             </View>
 
-            <View style={styles.field}>
+            {/* <View style={styles.field}>
               <Text style={[styles.label, { color: colors.neutral[9] }]}>
                 {t('editProfile.bio')}
               </Text>
@@ -187,7 +163,7 @@ export function EditProfileScreen() {
               <Text style={[styles.charCount, { color: colors.neutral[8] }]}>
                 {bio.length}/160
               </Text>
-            </View>
+            </View> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

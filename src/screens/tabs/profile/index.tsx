@@ -12,7 +12,7 @@ import { Tweet, TweetData } from '@/components/tweet';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useUserCommentedPostIds } from '@/hooks/queries/use-comments';
+import { useUserCommentedPostIds, useUserCommentsCount } from '@/hooks/queries/use-comments';
 import { useBatchLikeCheck, useToggleLike, useUserLikedPosts } from '@/hooks/queries/use-likes';
 import { useDeletePost, usePostsByIds, useUserPosts } from '@/hooks/queries/use-posts';
 import { useBatchReportCheck } from '@/hooks/queries/use-reports';
@@ -70,7 +70,7 @@ function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isR
   return {
     id: post.id,
     author: {
-      name: post.authorDisplayName,
+      name: post.authorUsername,
       username: post.authorUsername,
     },
     content: post.content,
@@ -150,6 +150,9 @@ export function ProfileScreen() {
     refetch: refetchCommentedIds,
     isRefetching: isRefetchingCommentedIds,
   } = useUserCommentedPostIds(userId || '');
+
+  // Fetch user's comments count
+  const { data: commentsCount } = useUserCommentsCount(userId || undefined);
 
   // Fetch saved posts
   const { 
@@ -343,7 +346,7 @@ export function ProfileScreen() {
     const author: UserDocument = {
       id: post.authorId,
       username: post.authorUsername,
-      displayName: post.authorDisplayName,
+      displayName: post.authorUsername, // Keep for type compatibility but use username
       email: '',
       postsCount: 0,
       followersCount: 0,
@@ -480,14 +483,9 @@ export function ProfileScreen() {
       <View style={styles.profileSection}>
         <View style={styles.profileDetails}>
           <View style={styles.nameRow}>
-            <View style={styles.nameContainer}>
               <Text style={[styles.name, { color: colors.neutral[12] }]}>
-                {userProfile?.displayName || t('addPost.user')}
-              </Text>
-              <Text style={[styles.username, { color: colors.orange[9] }]}>
                 @{userProfile?.username || 'user'}
               </Text>
-            </View>
             <View style={styles.statsInline}>
               <TouchableOpacity style={styles.statItemInline}>
                 <Text style={[styles.statNumberInline, { color: colors.neutral[12] }]}>
@@ -499,18 +497,10 @@ export function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.statItemInline}>
                 <Text style={[styles.statNumberInline, { color: colors.neutral[12] }]}>
-                  {userProfile?.followingCount || 0}
+                  {commentsCount || 0}
                 </Text>
                 <Text style={[styles.statLabelInline, { color: colors.neutral[9] }]}>
-                  {t('tabs.profile.following')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.statItemInline}>
-                <Text style={[styles.statNumberInline, { color: colors.neutral[12] }]}>
-                  {userProfile?.followersCount || 0}
-                </Text>
-                <Text style={[styles.statLabelInline, { color: colors.neutral[9] }]}>
-                  {t('tabs.profile.followers')}
+                  {t('tabs.profile.comments')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -621,25 +611,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  nameContainer: {
-    flex: 1,
-    minWidth: 120,
-    justifyContent: 'center',
+    gap: 16,
   },
   name: {
     ...applyFont({
       fontSize: 22,
       fontWeight: '700',
     }),
-    marginBottom: 2,
   },
   statsInline: {
     flexDirection: 'row',
     gap: 16,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   statItemInline: {
     alignItems: 'center',

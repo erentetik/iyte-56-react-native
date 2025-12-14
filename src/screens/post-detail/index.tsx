@@ -9,14 +9,15 @@ import { Tweet, TweetData } from '@/components/tweet';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useCommentReplies, useCreateComment, usePostComments } from '@/hooks/queries/use-comments';
-import { useHasLikedPost, useToggleLike } from '@/hooks/queries/use-likes';
+import { useCommentReplies, useCreateComment, useDeleteComment, usePostComments } from '@/hooks/queries/use-comments';
+import { useHasLikedComment, useHasLikedPost, useToggleCommentLike, useToggleLike } from '@/hooks/queries/use-likes';
 import { useDeletePost, usePost } from '@/hooks/queries/use-posts';
 import { useHasReportedPost } from '@/hooks/queries/use-reports';
 import { useHasSavedPost, useToggleSave } from '@/hooks/queries/use-saves';
 import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { PostOptionsModal } from '@/screens/modal/post-options';
+import { ReportCommentModal } from '@/screens/modal/report-comment';
 import { ReportPostModal } from '@/screens/modal/report-post';
 import { CommentDocument, PostDocument, UserDocument } from '@/types/firestore';
 import { applyFont } from '@/utils/apply-fonts';
@@ -69,7 +70,7 @@ function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isR
   return {
     id: post.id,
     author: {
-      name: post.authorDisplayName,
+      name: post.authorUsername,
       username: post.authorUsername,
       avatar: post.authorAvatar,
       isAdmin: post.authorIsAdmin,
@@ -94,13 +95,64 @@ interface ReplyItemProps {
   onReply?: () => void;
   isReplyTarget?: boolean;
   isLast?: boolean;
+  currentUserId?: string;
+  userProfile?: UserDocument;
+  onReport?: (comment: CommentDocument) => void;
+  onDelete?: (comment: CommentDocument) => void;
 }
 
-function ReplyItem({ reply, onReply, isReplyTarget, isLast }: ReplyItemProps) {
+function ReplyItem({ 
+  reply, 
+  onReply, 
+  isReplyTarget, 
+  isLast,
+  currentUserId,
+  userProfile,
+  onReport,
+  onDelete,
+}: ReplyItemProps) {
   const { t } = useLanguage();
   const colors = useThemeColors();
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
   const isAdmin = reply.authorIsAdmin === true;
   const showAvatar = isAdmin && reply.authorAvatar;
+  const isOwnComment = !!(currentUserId && reply.authorId === currentUserId);
+  
+  // Check if user has liked this comment
+  const { data: isLiked } = useHasLikedComment(reply.id, currentUserId);
+  const toggleCommentLikeMutation = useToggleCommentLike();
+  
+  // Handle like
+  const handleLike = useCallback(() => {
+    if (!userProfile) return;
+    toggleCommentLikeMutation.mutate({
+      commentId: reply.id,
+      user: userProfile,
+    });
+  }, [userProfile, reply.id, toggleCommentLikeMutation]);
+  
+  // Handle report
+  const handleReport = useCallback(() => {
+    setShowOptionsModal(false);
+    onReport?.(reply);
+  }, [reply, onReport]);
+  
+  // Handle delete
+  const handleDelete = useCallback(() => {
+    setShowOptionsModal(false);
+    Alert.alert(
+      t('postOptions.deleteTitle'),
+      t('postOptions.deleteMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('postOptions.delete'),
+          style: 'destructive',
+          onPress: () => onDelete?.(reply),
+        },
+      ]
+    );
+  }, [reply, onDelete, t]);
   
   return (
     <View style={styles.commentCardWrapper}>
@@ -136,7 +188,10 @@ function ReplyItem({ reply, onReply, isReplyTarget, isLast }: ReplyItemProps) {
               {formatTimestamp(reply.createdAt, t)}
             </Text>
           </View>
-          <TouchableOpacity style={styles.moreButton}>
+          <TouchableOpacity 
+            style={styles.moreButton}
+            onPress={() => setShowOptionsModal(true)}
+          >
             <IconSymbol name="ellipsis" size={14} color={colors.neutral[9]} />
           </TouchableOpacity>
         </View>
@@ -150,16 +205,26 @@ function ReplyItem({ reply, onReply, isReplyTarget, isLast }: ReplyItemProps) {
         <View style={styles.commentActionsRow}>
           <View style={styles.commentActionsLeft}>
             <TouchableOpacity 
-              style={[styles.smallPillButton, { borderColor: colors.neutral[6] }]}
+              style={[
+                styles.smallPillButton, 
+                { 
+                  borderColor: isLiked ? colors.orange[6] : colors.neutral[6],
+                  backgroundColor: isLiked ? colors.orange[2] : 'transparent',
+                }
+              ]}
+              onPress={handleLike}
             >
-              <IconSymbol name="heart" size={14} color={colors.neutral[9]} />
-              <Text style={[styles.smallPillText, { color: colors.neutral[9] }]}>0</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.smallPillButton, { borderColor: colors.neutral[6] }]}
-            >
-              <IconSymbol name="bookmark" size={14} color={colors.neutral[9]} />
-              <Text style={[styles.smallPillText, { color: colors.neutral[9] }]}>0</Text>
+              <IconSymbol 
+                name={isLiked ? "heart.fill" : "heart"} 
+                size={14} 
+                color={isLiked ? colors.orange[9] : colors.neutral[9]} 
+              />
+              <Text style={[
+                styles.smallPillText, 
+                { color: isLiked ? colors.orange[9] : colors.neutral[9] }
+              ]}>
+                {reply.likesCount}
+              </Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity 
@@ -172,6 +237,15 @@ function ReplyItem({ reply, onReply, isReplyTarget, isLast }: ReplyItemProps) {
           </TouchableOpacity>
         </View>
       </View>
+      
+      {/* Reply Options Modal */}
+      <PostOptionsModal
+        visible={showOptionsModal}
+        isOwnPost={isOwnComment}
+        onClose={() => setShowOptionsModal(false)}
+        onDelete={handleDelete}
+        onReport={handleReport}
+      />
     </View>
   );
 }
@@ -184,9 +258,22 @@ interface RepliesSectionProps {
   parentCommentId: string;
   onReplyToComment: (comment: CommentDocument) => void;
   replyingToId?: string;
+  currentUserId?: string;
+  userProfile?: UserDocument;
+  onReport?: (comment: CommentDocument) => void;
+  onDelete?: (comment: CommentDocument) => void;
 }
 
-function RepliesSection({ postId, parentCommentId, onReplyToComment, replyingToId }: RepliesSectionProps) {
+function RepliesSection({ 
+  postId, 
+  parentCommentId, 
+  onReplyToComment, 
+  replyingToId,
+  currentUserId,
+  userProfile,
+  onReport,
+  onDelete,
+}: RepliesSectionProps) {
   const colors = useThemeColors();
   const { t } = useLanguage();
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useCommentReplies(postId, parentCommentId);
@@ -233,6 +320,10 @@ function RepliesSection({ postId, parentCommentId, onReplyToComment, replyingToI
           onReply={() => onReplyToComment(reply)}
           isReplyTarget={replyingToId === reply.id}
           isLast={index === replies.length - 1 && !hasNextPage}
+          currentUserId={currentUserId}
+          userProfile={userProfile}
+          onReport={onReport}
+          onDelete={onDelete}
         />
       ))}
       {hasNextPage && (
@@ -264,14 +355,68 @@ interface CommentItemProps {
   isReplyTarget?: boolean;
   onReplyToComment: (comment: CommentDocument) => void;
   replyingToId?: string;
+  currentUserId?: string;
+  userProfile?: UserDocument;
+  onReport?: (comment: CommentDocument) => void;
+  onDelete?: (comment: CommentDocument) => void;
 }
 
-function CommentItem({ comment, postId, onReply, isReplyTarget, onReplyToComment, replyingToId }: CommentItemProps) {
+function CommentItem({ 
+  comment, 
+  postId, 
+  onReply, 
+  isReplyTarget, 
+  onReplyToComment, 
+  replyingToId,
+  currentUserId,
+  userProfile,
+  onReport,
+  onDelete,
+}: CommentItemProps) {
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [showReplies, setShowReplies] = useState(false);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
   const isAdmin = comment.authorIsAdmin === true;
   const showAvatar = isAdmin && comment.authorAvatar;
+  const isOwnComment = !!(currentUserId && comment.authorId === currentUserId);
+  
+  // Check if user has liked this comment
+  const { data: isLiked } = useHasLikedComment(comment.id, currentUserId);
+  const toggleCommentLikeMutation = useToggleCommentLike();
+  
+  // Handle like
+  const handleLike = useCallback(() => {
+    if (!userProfile) return;
+    toggleCommentLikeMutation.mutate({
+      commentId: comment.id,
+      user: userProfile,
+    });
+  }, [userProfile, comment.id, toggleCommentLikeMutation]);
+  
+  // Handle report
+  const handleReport = useCallback(() => {
+    setShowOptionsModal(false);
+    onReport?.(comment);
+  }, [comment, onReport]);
+  
+  // Handle delete
+  const handleDelete = useCallback(() => {
+    setShowOptionsModal(false);
+    Alert.alert(
+      t('postOptions.deleteTitle'),
+      t('postOptions.deleteMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('postOptions.delete'),
+          style: 'destructive',
+          onPress: () => onDelete?.(comment),
+        },
+      ]
+    );
+  }, [comment, onDelete, t]);
   
   return (
     <View>
@@ -308,7 +453,10 @@ function CommentItem({ comment, postId, onReply, isReplyTarget, onReplyToComment
                 {formatTimestamp(comment.createdAt, t)}
               </Text>
             </View>
-            <TouchableOpacity style={styles.moreButton}>
+            <TouchableOpacity 
+              style={styles.moreButton}
+              onPress={() => setShowOptionsModal(true)}
+            >
               <IconSymbol name="ellipsis" size={14} color={colors.neutral[9]} />
             </TouchableOpacity>
           </View>
@@ -322,16 +470,26 @@ function CommentItem({ comment, postId, onReply, isReplyTarget, onReplyToComment
           <View style={styles.commentActionsRow}>
             <View style={styles.commentActionsLeft}>
               <TouchableOpacity 
-                style={[styles.smallPillButton, { borderColor: colors.neutral[6] }]}
+                style={[
+                  styles.smallPillButton, 
+                  { 
+                    borderColor: isLiked ? colors.orange[6] : colors.neutral[6],
+                    backgroundColor: isLiked ? colors.orange[2] : 'transparent',
+                  }
+                ]}
+                onPress={handleLike}
               >
-                <IconSymbol name="heart" size={14} color={colors.neutral[9]} />
-                <Text style={[styles.smallPillText, { color: colors.neutral[9] }]}>0</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.smallPillButton, { borderColor: colors.neutral[6] }]}
-              >
-                <IconSymbol name="bookmark" size={14} color={colors.neutral[9]} />
-                <Text style={[styles.smallPillText, { color: colors.neutral[9] }]}>0</Text>
+                <IconSymbol 
+                  name={isLiked ? "heart.fill" : "heart"} 
+                  size={14} 
+                  color={isLiked ? colors.orange[9] : colors.neutral[9]} 
+                />
+                <Text style={[
+                  styles.smallPillText, 
+                  { color: isLiked ? colors.orange[9] : colors.neutral[9] }
+                ]}>
+                  {comment.likesCount}
+                </Text>
               </TouchableOpacity>
             </View>
             
@@ -367,9 +525,22 @@ function CommentItem({ comment, postId, onReply, isReplyTarget, onReplyToComment
             parentCommentId={comment.id}
             onReplyToComment={onReplyToComment}
             replyingToId={replyingToId}
+            currentUserId={currentUserId}
+            userProfile={userProfile}
+            onReport={onReport}
+            onDelete={onDelete}
           />
         </View>
       )}
+      
+      {/* Comment Options Modal */}
+      <PostOptionsModal
+        visible={showOptionsModal}
+        isOwnPost={isOwnComment}
+        onClose={() => setShowOptionsModal(false)}
+        onDelete={handleDelete}
+        onReport={handleReport}
+      />
     </View>
   );
 }
@@ -385,8 +556,10 @@ export function PostDetailScreen() {
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<CommentDocument | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [commentReportModalVisible, setCommentReportModalVisible] = useState(false);
   const [postOptionsModalVisible, setPostOptionsModalVisible] = useState(false);
   const [sortBy, setSortBy] = useState<'latest' | 'mostLiked'>('latest');
+  const [selectedComment, setSelectedComment] = useState<CommentDocument | null>(null);
 
   // Fetch post data
   const { data: post, isLoading: isLoadingPost, refetch: refetchPost } = usePost(postId);
@@ -411,6 +584,9 @@ export function PostDetailScreen() {
   
   // Delete post mutation
   const deletePostMutation = useDeletePost();
+  
+  // Delete comment mutation
+  const deleteCommentMutation = useDeleteComment();
   
   // Check if current user is the author
   const isOwnPost = useMemo(() => {
@@ -490,6 +666,31 @@ export function PostDetailScreen() {
       Alert.alert(t('common.error'), error?.message || t('postOptions.deleteError'));
     }
   }, [post, user?.uid, isOwnPost, deletePostMutation, router, t]);
+
+  // Handle comment report
+  const handleCommentReport = useCallback((comment: CommentDocument) => {
+    if (!userProfile) return;
+    setSelectedComment(comment);
+    setCommentReportModalVisible(true);
+  }, [userProfile]);
+
+  // Handle comment delete
+  const handleCommentDelete = useCallback(async (comment: CommentDocument) => {
+    if (!user?.uid || comment.authorId !== user.uid) return;
+    
+    try {
+      await deleteCommentMutation.mutateAsync({
+        commentId: comment.id,
+        postId: postId,
+        parentCommentId: comment.parentCommentId,
+      });
+      // Refetch comments to update UI
+      refetchComments();
+    } catch (error: any) {
+      console.error('Error deleting comment:', error);
+      Alert.alert(t('common.error'), error?.message || t('postOptions.deleteError'));
+    }
+  }, [user?.uid, postId, deleteCommentMutation, refetchComments, t]);
   
   // Handle sort button press
   const handleSortPress = useCallback(() => {
@@ -643,9 +844,13 @@ export function PostDetailScreen() {
         isReplyTarget={replyingTo?.id === item.id}
         onReplyToComment={handleReplyToComment}
         replyingToId={replyingTo?.id}
+        currentUserId={user?.uid}
+        userProfile={userProfile ?? undefined}
+        onReport={handleCommentReport}
+        onDelete={handleCommentDelete}
       />
     ),
-    [postId, handleReplyToComment, replyingTo]
+    [postId, handleReplyToComment, replyingTo, user?.uid, userProfile, handleCommentReport, handleCommentDelete]
   );
   
   // Render footer
@@ -699,7 +904,7 @@ export function PostDetailScreen() {
   const postAuthor: UserDocument = {
     id: post.authorId,
     username: post.authorUsername,
-    displayName: post.authorDisplayName,
+    displayName: post.authorUsername, // Keep for type compatibility but use username
     email: '',
     postsCount: 0,
     followersCount: 0,
@@ -837,6 +1042,15 @@ export function PostDetailScreen() {
         author={postAuthor}
         reporter={userProfile as UserDocument | null}
         onClose={handleCloseReportModal}
+      />
+      <ReportCommentModal
+        visible={commentReportModalVisible}
+        comment={selectedComment}
+        reporter={userProfile as UserDocument | null}
+        onClose={() => {
+          setCommentReportModalVisible(false);
+          setSelectedComment(null);
+        }}
       />
     </SafeAreaView>
   );
