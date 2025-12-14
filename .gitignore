@@ -19,6 +19,12 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Firebase config files (sensitive)
+GoogleService-Info.plist
+google-services.json
+**/GoogleService-Info.plist
+**/google-services.json
+
 # Metro
 .metro-health-check*
 
