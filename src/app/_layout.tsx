@@ -7,7 +7,6 @@ import { WarningProvider, useWarning } from '@/contexts/WarningContext';
 import { queryClient } from '@/hooks/queries/query-client';
 import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { getExpoPushToken, markNotificationPermissionAsked, saveFCMToken } from '@/services/notifications';
 import { getPendingWarningId, getWarningText } from '@/services/warnings';
 import { applyFont } from '@/utils/apply-fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -78,39 +77,6 @@ function RootLayoutNav() {
     }
   }, [userProfile, user?.uid, setPendingWarning]);
   
-  // Request notification permission and save FCM token
-  useEffect(() => {
-    const setupNotifications = async () => {
-      if (!userProfile || !user?.uid) return;
-      
-      // Check if we've already asked for permission
-      if (userProfile.notificationPermissionAsked) {
-        // If permission was already asked, just try to get/update token
-        const token = await getExpoPushToken();
-        if (token && token !== userProfile.fcmToken) {
-          await saveFCMToken(user?.uid, token);
-        }
-        return;
-      }
-      
-      // Ask for permission
-      const token = await getExpoPushToken();
-      if (token) {
-        // User granted permission - save token and mark as asked
-        await Promise.all([
-          saveFCMToken(user?.uid, token),
-          markNotificationPermissionAsked(user?.uid),
-        ]);
-      } else {
-        // User denied permission - just mark as asked so we don't ask again
-        await markNotificationPermissionAsked(user?.uid);
-      }
-    };
-    
-    if (userProfile) {
-      setupNotifications();
-    }
-  }, [userProfile, user?.uid]);
 
   // Check onboarding status
   useEffect(() => {

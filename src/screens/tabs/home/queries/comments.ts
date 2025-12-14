@@ -5,8 +5,7 @@
  */
 
 import { db } from '@/config/firebase';
-import { createNotification } from '@/services/notifications';
-import { COLLECTIONS, CommentDocument, PostDocument, UserDocument } from '@/types/firestore';
+import { COLLECTIONS, CommentDocument, UserDocument } from '@/types/firestore';
 import {
   addDoc,
   collection,
@@ -325,75 +324,8 @@ export async function createComment(
         repliesCount: increment(1),
       });
       
-      // Get parent comment to notify the comment author
-      const parentCommentSnap = await getDoc(parentRef);
-      if (parentCommentSnap.exists()) {
-        const parentComment = parentCommentSnap.data() as CommentDocument;
-        // Create notification for reply if comment author is different
-        if (parentComment.authorId !== author.id) {
-          try {
-            // Get post for content preview
-            const postRef = doc(db, COLLECTIONS.POSTS, postId);
-            const postSnap = await getDoc(postRef);
-            const postContent = postSnap.exists() 
-              ? (postSnap.data() as PostDocument).content.substring(0, 100)
-              : undefined;
-            
-            const notificationData: any = {
-              userId: parentComment.authorId,
-              type: 'reply',
-              actorId: author.id,
-              actorUsername: author.username,
-              actorDisplayName: author.displayName,
-              postId: postId,
-              commentId: input.parentCommentId,
-              postContent,
-            };
-            
-            // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
-            if (author.avatar) {
-              notificationData.actorAvatar = author.avatar;
-            }
-            
-            await createNotification(notificationData);
-          } catch (error) {
-            console.error('Error creating reply notification:', error);
-          }
-        }
-      }
     } catch (err) {
       console.error('Error updating parent reply count:', err);
-    }
-  } else {
-    // Top-level comment - notify post author
-    try {
-      const postRef = doc(db, COLLECTIONS.POSTS, postId);
-      const postSnap = await getDoc(postRef);
-      if (postSnap.exists()) {
-        const postData = postSnap.data() as PostDocument;
-        // Create notification if post author is different from comment author
-        if (postData.authorId !== author.id) {
-          const notificationData: any = {
-            userId: postData.authorId,
-            type: 'comment',
-            actorId: author.id,
-            actorUsername: author.username,
-            actorDisplayName: author.displayName,
-            postId: postId,
-            commentId: docRef.id,
-            postContent: postData.content.substring(0, 100),
-          };
-          
-          // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
-          if (author.avatar) {
-            notificationData.actorAvatar = author.avatar;
-          }
-          
-          await createNotification(notificationData);
-        }
-      }
-    } catch (error) {
-      console.error('Error creating comment notification:', error);
     }
   }
   

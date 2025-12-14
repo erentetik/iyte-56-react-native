@@ -15,7 +15,7 @@ module.exports = {
   expo: {
     name: 'IYTE56',
     slug: 'iyte-56',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/app_logo.png',
     scheme: 'iyte56',
@@ -61,9 +61,6 @@ module.exports = {
     },
     extra: {
       router: {},
-      eas: {
-        projectId: 'ea71702b-7646-4b8b-b399-d059359eec28',
-      },
       // Firebase config from environment variables
       // These are available via process.env.EXPO_PUBLIC_* in your code
       firebase: {
@@ -75,7 +72,6 @@ module.exports = {
         appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
       },
     },
-    owner: 'erentetk',
   },
 };
 

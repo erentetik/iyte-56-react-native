@@ -5,7 +5,6 @@
  */
 
 import { db } from '@/config/firebase';
-import { createNotification } from '@/services/notifications';
 import { COLLECTIONS, PostDocument, PostLikeDocument, UserDocument } from '@/types/firestore';
 import {
   collection,
@@ -178,7 +177,6 @@ export async function likePost(
           notificationData.actorAvatar = user.avatar;
         }
         
-        await createNotification(notificationData);
       } catch (error) {
         console.error('Error creating like notification:', error);
         // Don't fail the like operation if notification fails
