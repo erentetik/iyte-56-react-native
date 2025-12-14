@@ -7,6 +7,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { applyFont } from '@/utils/apply-fonts';
 import React from 'react';
 import {
     Modal,
@@ -126,8 +127,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   cancelText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
     textAlign: 'center',
   },
 });

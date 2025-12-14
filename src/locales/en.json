@@ -39,7 +39,14 @@
       "invalidDomain": "Please use your IYTE student email",
       "sendError": "An error occurred while sending the email",
       "studentEmailHint": "Enter your name",
-      "devModeHint": "Dev mode: Enter your Gmail username"
+      "devModeHint": "Dev mode: Enter your Gmail username",
+      "password": "Password",
+      "passwordPlaceholder": "Enter password",
+      "passwordRequired": "Please enter your password",
+      "invalidPassword": "Invalid password",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "signInError": "An error occurred while signing in"
     },
     "setup": {
       "title": "Complete Your Profile",
@@ -75,7 +82,10 @@
       "title": "Home",
       "trends": "Trends",
       "follows": "Follows",
-      "empty": "No posts yet. Be the first to post!"
+      "featured": "Featured",
+      "latest": "Latest",
+      "empty": "No posts yet. Be the first to post!",
+      "noPostsFound": "No posts found"
     },
     "notifications": {
       "title": "Notifications",
@@ -116,7 +126,10 @@
     "selectLanguage": "Select Language",
     "theme": "Theme",
     "selectTheme": "Select Theme",
-    "checkEmail": "Check IYTE Email"
+    "checkEmail": "Check IYTE Email",
+    "legal": "Legal",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfUse": "Terms of Use"
   },
   "editProfile": {
     "title": "Edit Profile",
@@ -156,7 +169,10 @@
     "repliesError": "Failed to load replies",
     "loadMoreReplies": "Load more replies",
     "commentError": "Failed to post comment. Please try again.",
-    "notFound": "Post not found"
+    "notFound": "Post not found",
+    "latest": "Latest",
+    "mostLiked": "Most Liked",
+    "sortComments": "Sort Comments"
   },
   "reportPost": {
     "title": "Report Post",
@@ -180,10 +196,42 @@
     "ok": "OK",
     "cancel": "Cancel",
     "retry": "Try Again",
-    "optional": "Optional"
+    "optional": "Optional",
+    "anonymous": "Anonymous",
+    "anonymousUsername": "anonymous",
+    "user": "user"
   },
   "postOptions": {
     "delete": "Delete",
-    "report": "Report"
+    "report": "Report",
+    "deleteTitle": "Delete Post",
+    "deleteMessage": "Are you sure you want to delete this post? This action cannot be undone.",
+    "deleteError": "Failed to delete post",
+    "comments": "Comments"
+  },
+  "search": {
+    "placeholder": "Search posts..."
+  },
+  "errors": {
+    "cannotOpenUrl": "Cannot open",
+    "imagePickerUnavailable": "Image picker is not available. Please rebuild the app with native modules.",
+    "imagePickerError": "Failed to open image picker. Please try again."
+  },
+  "languages": {
+    "english": "English",
+    "turkish": "Türkçe"
+  },
+  "time": {
+    "ago": "ago",
+    "seconds": "s",
+    "minutes": "m",
+    "hours": "h",
+    "days": "d",
+    "minute": "minute",
+    "minutesPlural": "minutes",
+    "hour": "hour",
+    "hoursPlural": "hours",
+    "day": "day",
+    "daysPlural": "days"
   }
 }

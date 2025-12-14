@@ -17,6 +17,7 @@ import {
 } from '@/screens/tabs/home/queries/comments';
 import { CommentDocument, UserDocument } from '@/types/firestore';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Timestamp } from 'firebase/firestore';
 import { queryKeys } from './query-client';
 
 // ============================================================================
@@ -117,11 +118,103 @@ export function useCreateComment() {
     }) => {
       return createComment(postId, author, input);
     },
-    onSuccess: (_, { postId }) => {
-      // Invalidate comments for this post
-      queryClient.invalidateQueries({ queryKey: queryKeys.comments.byPost(postId) });
+    onMutate: async ({ postId, author, input }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.comments.byPost(postId) });
       
-      // Update post's comment count
+      // Snapshot previous value
+      const previousComments = queryClient.getQueriesData({ 
+        queryKey: queryKeys.comments.byPost(postId) 
+      });
+      
+      // Create optimistic comment
+      const tempId = `temp-${Date.now()}`;
+      const now = Timestamp.now();
+      const optimisticComment: CommentDocument = {
+        id: tempId,
+        postId,
+        content: input.content,
+        authorId: author.id,
+        authorUsername: author.username || 'user',
+        authorDisplayName: author.displayName || 'User',
+        authorIsVerified: author.isVerified || false,
+        authorIsAdmin: author.isAdmin || false,
+        parentCommentId: input.parentCommentId,
+        depth: input.parentCommentId ? 1 : 0,
+        likesCount: 0,
+        repliesCount: 0,
+        isDeleted: false,
+        isHidden: false,
+        reportCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+      
+      // Only include authorAvatar if it exists
+      if (author.avatar) {
+        optimisticComment.authorAvatar = author.avatar;
+      }
+      
+      // Optimistically update comments list
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.comments.byPost(postId) },
+        (old: any) => {
+          if (!old || !old.pages || old.pages.length === 0) {
+            // If no data yet, create initial page with optimistic comment
+            return {
+              pages: [{ comments: [optimisticComment], lastDoc: null }],
+              pageParams: [undefined],
+            };
+          }
+          
+          return {
+            ...old,
+            pages: old.pages.map((page: any, index: number) => {
+              if (index === 0) {
+                return {
+                  ...page,
+                  comments: [optimisticComment, ...(page.comments || [])],
+                };
+              }
+              return page;
+            }),
+          };
+        }
+      );
+      
+      return { previousComments, optimisticComment };
+    },
+    onError: (err, { postId }, context) => {
+      // Rollback on error
+      if (context?.previousComments) {
+        context.previousComments.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSuccess: (commentId, { postId }, context) => {
+      // Replace optimistic comment with real one
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.comments.byPost(postId) },
+        (old: any) => {
+          if (!old) return old;
+          
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              comments: page.comments.map((comment: CommentDocument) =>
+                comment.id === context?.optimisticComment.id
+                  ? { ...comment, id: commentId }
+                  : comment
+              ),
+            })),
+          };
+        }
+      );
+      
+      // Invalidate to get fresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.byPost(postId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.detail(postId) });
     },
   });

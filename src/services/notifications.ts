@@ -6,8 +6,8 @@
 
 import { db } from '@/config/firebase';
 import { COLLECTIONS, NotificationDocument } from '@/types/firestore';
-import Constants from 'expo-constants';
 import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
 // Lazy load expo-notifications to avoid errors when native module isn't available
 let Notifications: typeof import('expo-notifications') | null = null;
@@ -68,36 +68,103 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 /**
- * Get FCM token (Expo push token)
+ * Get FCM token using Firebase Messaging
+ * Returns the FCM token on both Android and iOS
+ * 
+ * IMPORTANT: For proper FCM token support on iOS, you need to:
+ * 1. Install @react-native-firebase/messaging: npm install @react-native-firebase/messaging
+ * 2. Run: npx expo prebuild --clean
+ * 3. Configure Firebase in your app
+ * 
+ * Without @react-native-firebase/messaging, iOS will get APNs token instead of FCM token,
+ * which will cause "invalid FCM registration token" errors in Cloud Functions.
  */
-export async function getExpoPushToken(): Promise<string | null> {
-  const NotificationsModule = await getNotificationsModule();
-  if (!NotificationsModule) {
-    return null;
-  }
-  
+export async function getFCMToken(): Promise<string | null> {
   try {
+    // Request notification permissions first
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
+      console.warn('Notification permission not granted');
       return null;
     }
-    
-    // Get Expo project ID from Constants (EAS project ID)
-    // If not available, Expo will use the default project
-    const expoProjectId = Constants.expoConfig?.extra?.eas?.projectId;
-    
-    const options: { projectId?: string } = {};
-    if (expoProjectId) {
-      options.projectId = expoProjectId;
+
+    // Try to use @react-native-firebase/messaging if available
+    // This is the proper way to get FCM tokens on native platforms
+    let firebaseMessaging: any = null;
+    try {
+      // Try to import @react-native-firebase/messaging
+      // Use require to avoid build errors if package is not installed
+      const rnfbMessaging = require('@react-native-firebase/messaging');
+      firebaseMessaging = rnfbMessaging.default || rnfbMessaging;
+    } catch (error) {
+      // Package not installed, will use fallback
+      console.log('@react-native-firebase/messaging not installed, using expo-notifications fallback');
     }
+
+    // If @react-native-firebase/messaging is available, use it
+    if (firebaseMessaging && typeof firebaseMessaging === 'function') {
+      try {
+        const messagingInstance = firebaseMessaging();
+        if (messagingInstance && messagingInstance.getToken) {
+          const token = await messagingInstance.getToken();
+          if (token) {
+            console.log('Got FCM token from @react-native-firebase/messaging');
+            return token;
+          }
+        }
+      } catch (error) {
+        console.error('Error getting FCM token from @react-native-firebase/messaging:', error);
+        // Fall through to expo-notifications fallback
+      }
+    }
+
+    // Fallback: Use expo-notifications
+    // WARNING: On iOS, this returns APNs token, not FCM token!
+    // This will cause "invalid FCM registration token" errors
+    const NotificationsModule = await getNotificationsModule();
+    if (!NotificationsModule) {
+      console.error('expo-notifications not available');
+      return null;
+    }
+
+    // Get device push token
+    const tokenData = await NotificationsModule.getDevicePushTokenAsync();
+    const deviceToken = tokenData.data as string;
+
+    if (!deviceToken) {
+      console.error('No device token received');
+      return null;
+    }
+
+    // On Android, the device token from expo-notifications IS the FCM token
+    if (Platform.OS === 'android') {
+      console.log('Got FCM token from expo-notifications (Android)');
+      return deviceToken;
+    }
+
+    // On iOS, expo-notifications returns APNs token, not FCM token
+    // This is the root cause of the error!
+    console.error(
+      'ERROR: On iOS, expo-notifications returns APNs token, not FCM token. ' +
+      'This token will NOT work with Firebase Cloud Functions. ' +
+      'Please install @react-native-firebase/messaging for proper FCM token support.'
+    );
     
-    const tokenData = await NotificationsModule.getExpoPushTokenAsync(options);
-    
-    return tokenData.data;
+    // Don't return APNs token - it will cause errors
+    // Return null so the app doesn't save an invalid token
+    return null;
   } catch (error) {
-    console.error('Error getting Expo push token:', error);
+    console.error('Error getting FCM token:', error);
     return null;
   }
+}
+
+/**
+ * Get FCM token (legacy function name for compatibility)
+ * @deprecated Use getFCMToken() instead
+ */
+export async function getExpoPushToken(): Promise<string | null> {
+  return getFCMToken();
 }
 
 /**

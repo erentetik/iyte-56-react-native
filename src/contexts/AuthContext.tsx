@@ -2,7 +2,7 @@ import { auth } from '@/config/firebase';
 import { createUserProfile, getUserProfile, updateUserProfile } from '@/services/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
-import { User, UserCredential, isSignInWithEmailLink, onAuthStateChanged, sendSignInLinkToEmail, signInWithEmailLink } from 'firebase/auth';
+import { User, UserCredential, isSignInWithEmailLink, onAuthStateChanged, sendSignInLinkToEmail, signInWithEmailAndPassword, signInWithEmailLink } from 'firebase/auth';
 import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   sendSignInLink: (email: string) => Promise<void>;
   signInWithLink: (email: string, emailLink: string) => Promise<UserCredential>;
+  signInWithEmailAndPassword: (email: string, password: string) => Promise<UserCredential>;
   signOut: () => Promise<void>;
   checkEmailLink: (url: string) => Promise<boolean>;
 }
@@ -47,9 +48,9 @@ function extractFirebaseActionUrl(url: string): string {
           
           // Continue processing with extracted link
           return extractFirebaseActionUrl(extractedLink);
-        } catch (e) {
-          console.log('extractFirebaseActionUrl: Failed to decode deep link param');
-        }
+          } catch {
+            console.log('extractFirebaseActionUrl: Failed to decode deep link param');
+          }
       }
     }
     
@@ -68,9 +69,9 @@ function extractFirebaseActionUrl(url: string): string {
           decodedUrl = decodeURIComponent(decodedUrl);
           if (prevDecoded === decodedUrl) break;
         }
-      } catch (e) {
-        decodedUrl = currentUrl;
-      }
+        } catch {
+          decodedUrl = currentUrl;
+        }
       
       console.log(`extractFirebaseActionUrl: Iteration ${iterations}, decoded:`, decodedUrl.substring(0, 100));
       
@@ -89,7 +90,7 @@ function extractFirebaseActionUrl(url: string): string {
             currentUrl = decodeURIComponent(linkMatch[1]);
             console.log('extractFirebaseActionUrl: Extracted link param');
             continue;
-          } catch (e) {
+          } catch {
             currentUrl = linkMatch[1];
             continue;
           }
@@ -103,7 +104,7 @@ function extractFirebaseActionUrl(url: string): string {
             currentUrl = linkParam;
             continue;
           }
-        } catch (e) {
+        } catch {
           // URL parsing failed
         }
       }
@@ -156,7 +157,12 @@ async function ensureUserDocument(user: User): Promise<void> {
         userData.displayName = user.displayName;
       }
       if (user.email) {
-        userData.username = user.email.split('@')[0];
+        const emailUsername = user.email.split('@')[0];
+        userData.username = emailUsername;
+        // For adminapple, set displayName if not set
+        if (emailUsername === 'adminapple' && !user.displayName) {
+          userData.displayName = 'Admin Apple';
+        }
       }
       if (user.photoURL) {
         userData.avatar = user.photoURL;
@@ -341,7 +347,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isValidLink = true;
             console.log('signInWithLink: Decoded URL is valid');
           }
-        } catch (e) {
+        } catch {
           console.log('signInWithLink: Could not decode URL further');
         }
       }
@@ -378,6 +384,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInWithEmailAndPasswordAuth = async (email: string, password: string): Promise<UserCredential> => {
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Ensure user document exists in Firestore
+      if (result.user) {
+        await ensureUserDocument(result.user);
+        // Save userId to AsyncStorage
+        await AsyncStorage.setItem(USER_ID_KEY, result.user.uid);
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('Error signing in with email and password:', error);
+      throw error;
+    }
+  };
+
   const checkEmailLink = async (url: string): Promise<boolean> => {
     return isSignInWithEmailLink(auth, url);
   };
@@ -398,6 +422,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     sendSignInLink,
     signInWithLink,
+    signInWithEmailAndPassword: signInWithEmailAndPasswordAuth,
     signOut,
     checkEmailLink,
   };

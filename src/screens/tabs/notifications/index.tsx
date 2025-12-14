@@ -4,6 +4,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/hooks/queries/use-notifications';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { NotificationDocument } from '@/types/firestore';
+import { applyFont } from '@/utils/apply-fonts';
+import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 import React from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Format timestamp to relative time string
  */
-function formatTimestamp(timestamp: Timestamp | undefined): string {
+function formatTimestamp(timestamp: Timestamp | undefined, t: (key: string) => string): string {
   if (!timestamp) return '';
   
   const now = new Date();
@@ -23,10 +25,10 @@ function formatTimestamp(timestamp: Timestamp | undefined): string {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
   
-  if (diffSeconds < 60) return `${diffSeconds}s ago`;
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffSeconds < 60) return `${diffSeconds}${t('time.seconds')} ${t('time.ago')}`;
+  if (diffMinutes < 60) return `${diffMinutes}${t('time.minutes')} ${t('time.ago')}`;
+  if (diffHours < 24) return `${diffHours}${t('time.hours')} ${t('time.ago')}`;
+  if (diffDays < 7) return `${diffDays}${t('time.days')} ${t('time.ago')}`;
   
   return date.toLocaleDateString();
 }
@@ -35,6 +37,7 @@ export function NotificationsScreen() {
   const colors = useThemeColors();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const router = useRouter();
   
   const {
     data: notifications,
@@ -69,6 +72,14 @@ export function NotificationsScreen() {
     }
   };
   
+  const handleNotificationPress = (notification: NotificationDocument) => {
+    // Only navigate if notification has a postId (like, comment, reply notifications)
+    // Follow notifications don't have a postId, so we don't navigate for those
+    if (notification.postId) {
+      router.push(`/post/${notification.postId}`);
+    }
+  };
+
   const renderNotification = ({ item }: { item: NotificationDocument }) => {
     const icon = getNotificationIcon(item.type);
     const isUnread = !item.isRead;
@@ -82,6 +93,8 @@ export function NotificationsScreen() {
             borderBottomColor: colors.neutral[6],
           },
         ]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.7}
       >
         <View style={styles.iconContainer}>
           <IconSymbol name={icon.name} size={20} color={icon.color} />
@@ -100,7 +113,7 @@ export function NotificationsScreen() {
             </Text>
           )}
           <Text style={[styles.timestamp, { color: colors.neutral[9] }]}>
-            {formatTimestamp(item.createdAt)}
+            {formatTimestamp(item.createdAt, t)}
           </Text>
         </View>
         {isUnread && (
@@ -211,24 +224,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   text: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     lineHeight: 20,
     marginBottom: 4,
   },
   bold: {
-    fontWeight: '700',
+    ...applyFont({
+      fontWeight: '700',
+    }),
   },
   username: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
   },
   postPreview: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
     marginTop: 4,
     marginBottom: 4,
     fontStyle: 'italic',
   },
   timestamp: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
   },
   emptyContainer: {
     flex: 1,
@@ -237,7 +260,9 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
   },
   emptyText: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     marginTop: 16,
     textAlign: 'center',
   },

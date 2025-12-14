@@ -1,6 +1,7 @@
-import React from 'react';
-import { TextInput, StyleSheet, TextInputProps, View, Text } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { applyFont } from '@/utils/apply-fonts';
+import React from 'react';
+import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -40,8 +41,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '600',
+    }),
     marginBottom: 8,
   },
   input: {
@@ -49,11 +52,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   error: {
     color: '#ef4444',
-    fontSize: 12,
+    ...applyFont({
+      fontSize: 12,
+    }),
     marginTop: 4,
   },
 });

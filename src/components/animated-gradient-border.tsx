@@ -42,7 +42,7 @@ export function AnimatedGradientBorder({
       -1, // Infinite repeat
       false // Don't reverse
     );
-  }, []);
+  }, [progress]);
 
   // Create animated border color
   const animatedBorderStyle = useAnimatedStyle(() => {

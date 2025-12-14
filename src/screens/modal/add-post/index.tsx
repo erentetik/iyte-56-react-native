@@ -4,32 +4,33 @@
  * Allows users to create new posts with optional image and anonymous posting.
  */
 
-import { Avatar } from '@/components/ui/avatar';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useCreatePost, useUser } from '@/hooks/queries';
-import { useThemeColors } from '@/hooks/use-theme-colors';
-import { uploadPostImage } from '@/services/storage';
-import { UserDocument } from '@/types/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Avatar } from '../../../components/ui/avatar';
+import { IconSymbol } from '../../../components/ui/icon-symbol';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
+import { useCreatePost, useUser } from '../../../hooks/queries';
+import { useThemeColors } from '../../../hooks/use-theme-colors';
+import { uploadPostImage } from '../../../services/storage';
+import { UserDocument } from '../../../types/firestore';
+import { applyFont } from '../../../utils/apply-fonts';
 
 const MAX_CONTENT_LENGTH = 280;
 
@@ -200,7 +201,7 @@ export function AddPostScreen() {
                 {isAnonymous ? t('addPost.anonymous') : (userProfile?.displayName || t('addPost.user'))}
               </Text>
               <Text style={[styles.authorUsername, { color: colors.neutral[9] }]}>
-                @{isAnonymous ? 'anonymous' : (userProfile?.username || 'user')}
+                @{isAnonymous ? t('common.anonymousUsername') : (userProfile?.username || t('common.user'))}
               </Text>
             </View>
           </View>
@@ -333,8 +334,10 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
+    ...applyFont({
+      fontWeight: '600',
+      fontSize: 15,
+    }),
   },
   scrollView: {
     flex: 1,
@@ -349,14 +352,20 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   authorName: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
   authorUsername: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
   },
   contentInput: {
-    fontSize: 18,
+    ...applyFont({
+      fontSize: 18,
+    }),
     lineHeight: 24,
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -398,10 +407,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionLabel: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   anonymousNote: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
     paddingHorizontal: 16,
     paddingBottom: 16,
     marginTop: -8,
@@ -422,7 +435,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   charCount: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '500',
+    }),
   },
 });

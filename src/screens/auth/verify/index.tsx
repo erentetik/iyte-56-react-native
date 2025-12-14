@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { applyFont } from '@/utils/apply-fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -56,10 +57,10 @@ export function VerifyScreen() {
                 emailLink = decodeURIComponent(linkMatch[1]);
                 console.log('Verify screen: Extracted link from raw URL');
                 console.log('Verify screen: Contains oobCode:', emailLink.includes('oobCode'));
-              } catch (e) {
+              } catch {
                 try {
                   emailLink = decodeURIComponent(decodeURIComponent(linkMatch[1]));
-                } catch (e2) {
+                } catch {
                   emailLink = linkMatch[1];
                 }
               }
@@ -108,7 +109,7 @@ export function VerifyScreen() {
     };
 
     handleEmailLink();
-  }, [params.link, t]);
+  }, [params.link, t, router, signInWithLink]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
@@ -151,26 +152,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   text: {
-    fontSize: 20,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 20,
+      fontWeight: '600',
+    }),
     marginTop: 16,
     textAlign: 'center',
   },
   subtext: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
     marginTop: 8,
     textAlign: 'center',
   },
   successIcon: {
-    fontSize: 64,
-    fontWeight: 'bold',
+    ...applyFont({
+      fontSize: 64,
+      fontWeight: 'bold',
+    }),
   },
   errorIcon: {
-    fontSize: 64,
-    fontWeight: 'bold',
+    ...applyFont({
+      fontSize: 64,
+      fontWeight: 'bold',
+    }),
   },
   errorText: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,

@@ -39,7 +39,14 @@
       "invalidDomain": "Lütfen İYTE öğrenci e-postanızı kullanın",
       "sendError": "E-posta gönderilirken bir hata oluştu",
       "studentEmailHint": "İsminizi girin ",
-      "devModeHint": "Geliştirici modu: Gmail kullanıcı adınızı girin"
+      "devModeHint": "Geliştirici modu: Gmail kullanıcı adınızı girin",
+      "password": "Şifre",
+      "passwordPlaceholder": "Şifrenizi girin",
+      "passwordRequired": "Lütfen şifrenizi girin",
+      "invalidPassword": "Geçersiz şifre",
+      "signIn": "Giriş Yap",
+      "signingIn": "Giriş yapılıyor...",
+      "signInError": "Giriş yapılırken bir hata oluştu"
     },
     "setup": {
       "title": "Profilinizi Tamamlayın",
@@ -75,7 +82,10 @@
       "title": "Ana Sayfa",
       "trends": "Trendler",
       "follows": "Takip",
-      "empty": "Henüz gönderi yok. İlk gönderiyi sen paylaş!"
+      "featured": "Öne Çıkanlar",
+      "latest": "Son Gönderiler",
+      "empty": "Henüz gönderi yok. İlk gönderiyi sen paylaş!",
+      "noPostsFound": "Gönderi bulunamadı"
     },
     "notifications": {
       "title": "Bildirimler",
@@ -116,7 +126,10 @@
     "selectLanguage": "Dil Seçin",
     "theme": "Tema",
     "selectTheme": "Tema Seçin",
-    "checkEmail": "IYTE E-Posta Kontrol Et"
+    "checkEmail": "IYTE E-Posta Kontrol Et",
+    "legal": "Yasal",
+    "privacyPolicy": "Gizlilik Politikası",
+    "termsOfUse": "Kullanım Şartları"
   },
   "editProfile": {
     "title": "Profili Düzenle",
@@ -156,7 +169,10 @@
     "repliesError": "Yanıtlar yüklenemedi",
     "loadMoreReplies": "Daha fazla yanıt yükle",
     "commentError": "Yorum gönderilemedi. Lütfen tekrar deneyin.",
-    "notFound": "Gönderi bulunamadı"
+    "notFound": "Gönderi bulunamadı",
+    "latest": "Son Yorumlar",
+    "mostLiked": "En Beğenilenler",
+    "sortComments": "Yorumları Sırala"
   },
   "reportPost": {
     "title": "Gönderiyi Bildir",
@@ -180,10 +196,42 @@
     "ok": "Tamam",
     "cancel": "İptal",
     "retry": "Tekrar Dene",
-    "optional": "İsteğe Bağlı"
+    "optional": "İsteğe Bağlı",
+    "anonymous": "Anonim",
+    "anonymousUsername": "anonim",
+    "user": "kullanıcı"
   },
   "postOptions": {
     "delete": "Sil",
-    "report": "Şikayet Et"
+    "report": "Şikayet Et",
+    "deleteTitle": "Gönderiyi Sil",
+    "deleteMessage": "Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+    "deleteError": "Gönderi silinemedi",
+    "comments": "Yorumlar"
+  },
+  "search": {
+    "placeholder": "Gönderilerde ara..."
+  },
+  "errors": {
+    "cannotOpenUrl": "Açılamıyor",
+    "imagePickerUnavailable": "Görsel seçici kullanılamıyor. Lütfen uygulamayı yerel modüllerle yeniden oluşturun.",
+    "imagePickerError": "Görsel seçici açılamadı. Lütfen tekrar deneyin."
+  },
+  "languages": {
+    "english": "English",
+    "turkish": "Türkçe"
+  },
+  "time": {
+    "ago": "önce",
+    "seconds": "s",
+    "minutes": "d",
+    "hours": "s",
+    "days": "g",
+    "minute": "dakika",
+    "minutesPlural": "dakika",
+    "hour": "saat",
+    "hoursPlural": "saat",
+    "day": "gün",
+    "daysPlural": "gün"
   }
 }

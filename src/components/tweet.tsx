@@ -1,5 +1,7 @@
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { PostOptionsModal } from '@/screens/modal/post-options';
+import { applyFont } from '@/utils/apply-fonts';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -39,11 +41,11 @@ interface TweetProps {
 
 export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDelete, isOwnPost = false }: TweetProps) {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
   // Display anonymous info if post is anonymous
-  const displayName = tweet.isAnonymous ? 'Anonymous' : tweet.author.name;
-  const displayUsername = tweet.isAnonymous ? 'anonymous' : tweet.author.username;
+  const displayUsername = tweet.isAnonymous ? t('common.anonymousUsername') : tweet.author.username;
   const isAdmin = !tweet.isAnonymous && tweet.author.isAdmin === true;
   const showAvatar = isAdmin && tweet.author.avatar;
 
@@ -53,14 +55,14 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Post',
-      'Are you sure you want to delete this post? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onDelete },
-      ]
-    );
+      Alert.alert(
+      t('postOptions.deleteTitle'),
+      t('postOptions.deleteMessage'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+        { text: t('postOptions.delete'), style: 'destructive', onPress: onDelete },
+        ]
+      );
   };
 
   const handleReport = () => {
@@ -68,18 +70,18 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
   };
 
   const CardContent = (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.backgroundEmphasis,
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onPress}
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.backgroundEmphasis,
           borderWidth: isAdmin ? 0 : 1,
           borderColor: isAdmin ? 'transparent' : colors.neutral[6],
-        },
-      ]}
-    >
+          },
+        ]}
+      >
         {/* Header: Avatar (if admin), Username, timestamp, more button */}
         <View style={styles.headerRow}>
           <View style={styles.userInfo}>
@@ -94,7 +96,7 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
               {isAdmin ? (
                 <AnimatedGradientText text={`@${displayUsername}`} style={styles.username} />
               ) : (
-                <Text style={[styles.username, { color: colors.orange[9] }]}>@{displayUsername}</Text>
+            <Text style={[styles.username, { color: colors.orange[9] }]}>@{displayUsername}</Text>
               )}
             </View>
             <Text style={[styles.dot, { color: colors.neutral[9] }]}>•</Text>
@@ -177,7 +179,7 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
             <IconSymbol name="message" size={16} color={colors.neutral[9]} />
             <View style={[styles.pillSeparator, { backgroundColor: colors.neutral[6] }]} />
             <Text style={[styles.commentsText, { color: colors.neutral[9] }]}>
-              {tweet.replies} Comments
+              {tweet.replies} {t('postOptions.comments')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -194,7 +196,7 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
         ) : (
           CardContent
         )}
-      </View>
+    </View>
       <PostOptionsModal
         visible={showOptionsModal}
         isOwnPost={isOwnPost}
@@ -239,24 +241,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   username: {
-    fontWeight: '600',
-    fontSize: 15,
+    ...applyFont({
+      fontWeight: '600',
+      fontSize: 15,
+    }),
   },
   dot: {
-    marginHorizontal: 6,
-    fontSize: 14,
+    ...applyFont({
+      marginHorizontal: 6,
+      fontSize: 14,
+    }),
   },
   timestamp: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
   },
   moreButton: {
     padding: 4,
   },
-  content: {
+  content: applyFont({
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 16,
-  },
+  }),
   imageContainer: {
     marginBottom: 16,
     borderRadius: 12,
@@ -286,8 +294,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionPillText: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '500',
+    }),
   },
   commentsPill: {
     flexDirection: 'row',
@@ -303,7 +313,9 @@ const styles = StyleSheet.create({
     height: 16,
   },
   commentsText: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '500',
+    }),
   },
 });

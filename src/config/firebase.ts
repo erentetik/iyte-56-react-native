@@ -5,7 +5,7 @@ import { Firestore, getFirestore } from 'firebase/firestore';
 import { FirebaseStorage, getStorage } from 'firebase/storage';
 
 // Firebase v10+ exports getReactNativePersistence from firebase/auth
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getReactNativePersistence } = require('firebase/auth');
 
 // Your Firebase config

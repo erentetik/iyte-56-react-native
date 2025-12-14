@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Language, useLanguage } from '@/contexts/LanguageContext';
 import { ThemeMode, useTheme } from '@/contexts/ThemeContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -91,7 +92,7 @@ export function SettingsScreen() {
           onPress: async () => {
             try {
               await signOut();
-            } catch (error) {
+            } catch {
               Alert.alert(t('common.error'), t('tabs.profile.signOutError'));
             }
           },
@@ -131,8 +132,8 @@ export function SettingsScreen() {
         undefined,
         [
           { text: t('common.cancel'), style: 'cancel' },
-          { text: 'English', onPress: () => setLanguage('en') },
-          { text: 'Türkçe', onPress: () => setLanguage('tr') },
+          { text: t('languages.english'), onPress: () => setLanguage('en') },
+          { text: t('languages.turkish'), onPress: () => setLanguage('tr') },
         ]
       );
     }
@@ -233,10 +234,24 @@ export function SettingsScreen() {
               onPress={handleThemeChange}
               value={THEME_NAMES[themeMode][language]}
             />
+          </View>
+        </View>
+
+        {/* Legal Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.neutral[9] }]}>
+            {t('settings.legal')}
+          </Text>
+          <View style={[styles.sectionContent, { backgroundColor: colors.neutral[2] }]}>
             <SettingsItem
-              icon="gearshape.fill"
-              label={t('settings.appSettings')}
-              onPress={handleOpenAppSettings}
+              icon="doc.text"
+              label={t('settings.privacyPolicy')}
+              onPress={() => router.push('/legal?type=privacy')}
+            />
+            <SettingsItem
+              icon="doc.text"
+              label={t('settings.termsOfUse')}
+              onPress={() => router.push('/legal?type=terms')}
             />
           </View>
         </View>
@@ -274,8 +289,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 18,
+      fontWeight: '600',
+    }),
   },
   placeholder: {
     width: 32,
@@ -288,8 +305,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 13,
+      fontWeight: '600',
+    }),
     textTransform: 'uppercase',
     marginBottom: 8,
     marginLeft: 4,
@@ -317,10 +336,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   settingsItemLabel: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   settingsItemValue: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
   },
 });
 

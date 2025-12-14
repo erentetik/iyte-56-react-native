@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { updateUser } from '@/services/users';
+import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -58,7 +59,7 @@ export function EditProfileScreen() {
         bio: bio.trim(),
       });
       router.back();
-    } catch (error) {
+    } catch {
       Alert.alert(t('common.error'), t('editProfile.saveError'));
     } finally {
       setIsSaving(false);
@@ -218,8 +219,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 18,
+      fontWeight: '600',
+    }),
   },
   saveButton: {
     paddingHorizontal: 16,
@@ -230,8 +233,10 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
+    ...applyFont({
+      fontWeight: '600',
+      fontSize: 15,
+    }),
   },
   scrollView: {
     flex: 1,
@@ -244,27 +249,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '500',
+    }),
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   textArea: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     minHeight: 100,
     textAlignVertical: 'top',
   },
   charCount: {
-    fontSize: 12,
+    ...applyFont({
+      fontSize: 12,
+    }),
     textAlign: 'right',
     marginTop: 4,
   },

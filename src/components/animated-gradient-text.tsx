@@ -1,3 +1,4 @@
+import { applyFont } from '@/utils/apply-fonts';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -36,7 +37,7 @@ export function AnimatedGradientText({ text, style }: AnimatedGradientTextProps)
       -1, // Infinite repeat
       false // Don't reverse
     );
-  }, []);
+  }, [progress]);
 
   // Create animated styles for each character
   const characters = text.split('');
@@ -100,7 +101,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   character: {
-    fontWeight: '700',
-    fontSize: 15,
+    ...applyFont({
+      fontWeight: '700',
+      fontSize: 15,
+    }),
   },
 });

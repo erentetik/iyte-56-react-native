@@ -1,4 +1,5 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { applyFont } from '@/utils/apply-fonts';
 import React from 'react';
 import { ActivityIndicator, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 
@@ -56,22 +57,28 @@ export function Button({
   const textStyles: Record<string, TextStyle> = {
     default: {
       color: '#fff',
-      fontWeight: '700',
+      ...applyFont({
+        fontWeight: '700',
+      }),
     },
     outline: {
       color: isDark ? '#fff' : '#000',
-      fontWeight: '700',
+      ...applyFont({
+        fontWeight: '700',
+      }),
     },
     ghost: {
       color: isDark ? '#fff' : '#000',
-      fontWeight: '600',
+      ...applyFont({
+        fontWeight: '600',
+      }),
     },
   };
 
   const textSizeStyles: Record<string, TextStyle> = {
-    sm: { fontSize: 14 },
-    md: { fontSize: 16 },
-    lg: { fontSize: 18 },
+    sm: applyFont({ fontSize: 14 }),
+    md: applyFont({ fontSize: 16 }),
+    lg: applyFont({ fontSize: 18 }),
   };
 
   return (

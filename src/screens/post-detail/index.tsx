@@ -19,15 +19,18 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { PostOptionsModal } from '@/screens/modal/post-options';
 import { ReportPostModal } from '@/screens/modal/report-post';
 import { CommentDocument, PostDocument, UserDocument } from '@/types/firestore';
+import { applyFont } from '@/utils/apply-fonts';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -40,7 +43,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Format timestamp to relative time string
  */
-function formatTimestamp(timestamp: Timestamp | undefined): string {
+function formatTimestamp(timestamp: Timestamp | undefined, t: (key: string) => string): string {
   if (!timestamp) return '';
   
   const now = new Date();
@@ -51,10 +54,10 @@ function formatTimestamp(timestamp: Timestamp | undefined): string {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
   
-  if (diffSeconds < 60) return `${diffSeconds}s ago`;
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffSeconds < 60) return `${diffSeconds}${t('time.seconds')} ${t('time.ago')}`;
+  if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes > 1 ? t('time.minutesPlural') : t('time.minute')} ${t('time.ago')}`;
+  if (diffHours < 24) return `${diffHours} ${diffHours > 1 ? t('time.hoursPlural') : t('time.hour')} ${t('time.ago')}`;
+  if (diffDays < 7) return `${diffDays} ${diffDays > 1 ? t('time.daysPlural') : t('time.day')} ${t('time.ago')}`;
   
   return date.toLocaleDateString();
 }
@@ -62,7 +65,7 @@ function formatTimestamp(timestamp: Timestamp | undefined): string {
 /**
  * Transform PostDocument to TweetData
  */
-function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isReported: boolean): TweetData {
+function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isReported: boolean, t: (key: string) => string): TweetData {
   return {
     id: post.id,
     author: {
@@ -72,7 +75,7 @@ function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isR
       isAdmin: post.authorIsAdmin,
     },
     content: post.content,
-    timestamp: formatTimestamp(post.createdAt),
+    timestamp: formatTimestamp(post.createdAt, t),
     likes: post.likesCount,
     replies: post.commentsCount,
     isLiked,
@@ -94,6 +97,7 @@ interface ReplyItemProps {
 }
 
 function ReplyItem({ reply, onReply, isReplyTarget, isLast }: ReplyItemProps) {
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const isAdmin = reply.authorIsAdmin === true;
   const showAvatar = isAdmin && reply.authorAvatar;
@@ -120,16 +124,16 @@ function ReplyItem({ reply, onReply, isReplyTarget, isLast }: ReplyItemProps) {
             )}
             <View style={styles.commentUsernameContainer}>
               {isAdmin ? (
-                <AnimatedGradientText text={`@${reply.authorUsername || 'user'}`} style={styles.commentUsername} />
+                <AnimatedGradientText text={`@${reply.authorUsername || t('common.user')}`} style={styles.commentUsername} />
               ) : (
                 <Text style={[styles.commentUsername, { color: colors.orange[9] }]}>
-                  @{reply.authorUsername || 'user'}
+                  @{reply.authorUsername || t('common.user')}
                 </Text>
               )}
             </View>
             <Text style={[styles.commentDot, { color: colors.neutral[9] }]}>•</Text>
             <Text style={[styles.commentTime, { color: colors.neutral[9] }]}>
-              {formatTimestamp(reply.createdAt)}
+              {formatTimestamp(reply.createdAt, t)}
             </Text>
           </View>
           <TouchableOpacity style={styles.moreButton}>
@@ -292,16 +296,16 @@ function CommentItem({ comment, postId, onReply, isReplyTarget, onReplyToComment
               )}
               <View style={styles.commentUsernameContainer}>
                 {isAdmin ? (
-                  <AnimatedGradientText text={`@${comment.authorUsername || 'user'}`} style={styles.commentUsername} />
+                  <AnimatedGradientText text={`@${comment.authorUsername || t('common.user')}`} style={styles.commentUsername} />
                 ) : (
                   <Text style={[styles.commentUsername, { color: colors.orange[9] }]}>
-                    @{comment.authorUsername || 'user'}
+                    @{comment.authorUsername || t('common.user')}
                   </Text>
                 )}
               </View>
               <Text style={[styles.commentDot, { color: colors.neutral[9] }]}>•</Text>
               <Text style={[styles.commentTime, { color: colors.neutral[9] }]}>
-                {formatTimestamp(comment.createdAt)}
+                {formatTimestamp(comment.createdAt, t)}
               </Text>
             </View>
             <TouchableOpacity style={styles.moreButton}>
@@ -379,11 +383,10 @@ export function PostDetailScreen() {
   const postId = params.postId;
 
   const [commentText, setCommentText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<CommentDocument | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [postOptionsModalVisible, setPostOptionsModalVisible] = useState(false);
-  const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'popular'>('latest');
+  const [sortBy, setSortBy] = useState<'latest' | 'mostLiked'>('latest');
 
   // Fetch post data
   const { data: post, isLoading: isLoadingPost, refetch: refetchPost } = usePost(postId);
@@ -428,10 +431,22 @@ export function PostDetailScreen() {
   // Create comment mutation
   const createCommentMutation = useCreateComment();
   
-  // Flatten comments
+  // Flatten and sort comments
   const comments = useMemo((): CommentDocument[] => {
-    return commentsData?.pages.flatMap((page: { comments: CommentDocument[] }) => page.comments) ?? [];
-  }, [commentsData]);
+    const allComments = commentsData?.pages.flatMap((page: { comments: CommentDocument[] }) => page.comments) ?? [];
+    
+    // Sort comments based on selected option
+    if (sortBy === 'mostLiked') {
+      return [...allComments].sort((a, b) => b.likesCount - a.likesCount);
+    } else {
+      // Latest: sort by createdAt descending (newest first)
+      return [...allComments].sort((a, b) => {
+        const aTime = a.createdAt?.toMillis() || 0;
+        const bTime = b.createdAt?.toMillis() || 0;
+        return bTime - aTime;
+      });
+    }
+  }, [commentsData, sortBy]);
   
   // Handle like
   const handleLike = useCallback(() => {
@@ -472,10 +487,44 @@ export function PostDetailScreen() {
       router.back();
     } catch (error: any) {
       console.error('Error deleting post:', error);
-      Alert.alert(t('common.error'), error?.message || 'Failed to delete post');
+      Alert.alert(t('common.error'), error?.message || t('postOptions.deleteError'));
     }
   }, [post, user?.uid, isOwnPost, deletePostMutation, router, t]);
   
+  // Handle sort button press
+  const handleSortPress = useCallback(() => {
+    const options = [t('postDetail.latest'), t('postDetail.mostLiked')];
+    
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...options, t('common.cancel')],
+          cancelButtonIndex: options.length,
+          title: t('postDetail.sortComments'),
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            setSortBy('latest');
+          } else if (buttonIndex === 1) {
+            setSortBy('mostLiked');
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        t('postDetail.sortComments'),
+        undefined,
+        [
+          ...options.map((option, index) => ({
+            text: option,
+            onPress: () => setSortBy(index === 0 ? 'latest' : 'mostLiked'),
+          })),
+          { text: t('common.cancel'), style: 'cancel' },
+        ]
+      );
+    }
+  }, [t]);
+
   // Close report modal
   const handleCloseReportModal = useCallback(() => {
     setReportModalVisible(false);
@@ -488,14 +537,14 @@ export function PostDetailScreen() {
 
   const handlePostDelete = useCallback(() => {
     Alert.alert(
-      'Delete Post',
-      'Are you sure you want to delete this post? This action cannot be undone.',
+      t('postOptions.deleteTitle'),
+      t('postOptions.deleteMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: handleDelete },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('postOptions.delete'), style: 'destructive', onPress: handleDelete },
       ]
     );
-  }, [handleDelete]);
+  }, [handleDelete, t]);
   
   // Handle reply to a comment
   const handleReplyToComment = useCallback((comment: CommentDocument) => {
@@ -507,33 +556,42 @@ export function PostDetailScreen() {
     setReplyingTo(null);
   }, []);
   
-  // Handle submit comment
-  const handleSubmitComment = useCallback(async () => {
+  // Handle submit comment - optimistic update
+  const handleSubmitComment = useCallback(() => {
     if (!commentText.trim() || !userProfile || !postId) {
       return;
     }
     
-    setIsSubmitting(true);
-    try {
-      await createCommentMutation.mutateAsync({
+    const content = commentText.trim();
+    const parentCommentId = replyingTo?.id;
+    
+    // Clear input immediately (optimistic UI)
+    setCommentText('');
+    setReplyingTo(null);
+    
+    // Submit in background (don't await)
+    createCommentMutation.mutate(
+      {
         postId,
         author: userProfile as UserDocument,
         input: { 
-          content: commentText.trim(),
-          parentCommentId: replyingTo?.id,
+          content,
+          parentCommentId,
         },
-      });
-      setCommentText('');
-      setReplyingTo(null);
-      refetchComments();
-      refetchPost();
-    } catch (error: any) {
-      console.error('Error creating comment:', error);
-      Alert.alert(t('common.error'), error?.message || t('postDetail.commentError'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [commentText, userProfile, postId, replyingTo, createCommentMutation, refetchComments, refetchPost, t]);
+      },
+      {
+        onError: (error: any) => {
+          console.error('Error creating comment:', error);
+          // Restore the comment text on error
+          setCommentText(content);
+          if (replyingTo) {
+            setReplyingTo(replyingTo);
+          }
+          Alert.alert(t('common.error'), error?.message || t('postDetail.commentError'));
+        },
+      }
+    );
+  }, [commentText, userProfile, postId, replyingTo, createCommentMutation, t]);
   
   // Load more comments
   const handleLoadMore = useCallback(() => {
@@ -546,7 +604,7 @@ export function PostDetailScreen() {
   const renderHeader = useCallback(() => {
     if (!post) return null;
     
-    const tweetData = postToTweet(post, isLiked ?? false, isSaved ?? false, isReported ?? false);
+    const tweetData = postToTweet(post, isLiked ?? false, isSaved ?? false, isReported ?? false, t);
     
     return (
       <View>
@@ -561,20 +619,19 @@ export function PostDetailScreen() {
         
         {/* Comments section header with Latest/Filter */}
         <View style={[styles.commentsHeader, { borderBottomColor: colors.neutral[6] }]}>
-          <TouchableOpacity style={styles.sortButton}>
+          <TouchableOpacity 
+            style={styles.sortButton}
+            onPress={handleSortPress}
+          >
             <Text style={[styles.sortButtonText, { color: colors.neutral[12] }]}>
-              {sortBy === 'latest' ? 'Latest' : sortBy === 'oldest' ? 'Oldest' : 'Popular'}
+              {sortBy === 'latest' ? t('postDetail.latest') : t('postDetail.mostLiked')}
             </Text>
             <IconSymbol name="chevron.down" size={14} color={colors.neutral[12]} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <IconSymbol name="line.3.horizontal.decrease" size={16} color={colors.neutral[9]} />
-            <Text style={[styles.filterText, { color: colors.neutral[9] }]}>Filter</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
-  }, [post, isLiked, isSaved, isReported, handleLike, handleSave, handleReport, colors, sortBy]);
+  }, [post, isLiked, isSaved, isReported, handleLike, handleSave, handleReport, handleDelete, isOwnPost, colors, sortBy, t, handleSortPress]);
   
   // Render comment item
   const renderComment = useCallback(
@@ -754,9 +811,9 @@ export function PostDetailScreen() {
                 },
               ]}
               onPress={handleSubmitComment}
-              disabled={!commentText.trim() || isSubmitting}
+              disabled={!commentText.trim() || createCommentMutation.isPending}
             >
-              {isSubmitting ? (
+              {createCommentMutation.isPending ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <IconSymbol name="paperplane.fill" size={18} color="#fff" />
@@ -818,7 +875,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   errorText: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     textAlign: 'center',
   },
   listContent: {
@@ -839,17 +898,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sortButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
   commentCardWrapper: {
     paddingHorizontal: 16,
@@ -883,21 +935,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   commentUsername: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 15,
+      fontWeight: '600',
+    }),
   },
   commentDot: {
     marginHorizontal: 6,
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
   },
   commentTime: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
   },
   moreButton: {
     padding: 4,
   },
   commentContent: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     lineHeight: 22,
     marginBottom: 14,
   },
@@ -921,8 +981,10 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   smallPillText: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 13,
+      fontWeight: '500',
+    }),
   },
   responsePill: {
     flexDirection: 'row',
@@ -938,8 +1000,10 @@ const styles = StyleSheet.create({
     height: 14,
   },
   responsePillText: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 13,
+      fontWeight: '500',
+    }),
   },
   repliesSection: {
     marginLeft: 24,
@@ -956,29 +1020,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   repliesErrorText: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
   },
   repliesEmpty: {
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
   repliesEmptyText: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
   },
   loadMoreReplies: {
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
   loadMoreText: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 13,
+      fontWeight: '500',
+    }),
   },
   emptyComments: {
     alignItems: 'center',
     paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     marginTop: 12,
   },
   footerLoader: {
@@ -996,7 +1068,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   replyingToText: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
   },
   inputContainer: {
     flexDirection: 'row',
@@ -1010,7 +1084,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     maxHeight: 100,
     borderWidth: 1,
   },

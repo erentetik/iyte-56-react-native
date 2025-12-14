@@ -96,7 +96,7 @@ export function useToggleSave() {
           return key.includes('batch') && key.includes(user.id);
         },
       });
-      const previousBatchQueries: Array<[unknown, unknown]> = batchQueries.map(([key, data]) => [key, data]);
+      const previousBatchQueries: [unknown, unknown][] = batchQueries.map(([key, data]) => [key, data]);
       
       // Snapshot saved posts list
       const previousSavedPosts = queryClient.getQueryData<PostSaveDocument[]>(
@@ -108,7 +108,7 @@ export function useToggleSave() {
       let currentSaveStatus = previousSaveStatus;
       if (currentSaveStatus === undefined) {
         // Try to get from batch queries
-        for (const [_, data] of batchQueries) {
+        for (const [, data] of batchQueries) {
           if (data instanceof Set && data.has(post.id)) {
             currentSaveStatus = true;
             break;

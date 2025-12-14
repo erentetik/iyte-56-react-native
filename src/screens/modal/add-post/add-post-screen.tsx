@@ -12,6 +12,7 @@ import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { uploadPostImage } from '@/services/storage';
 import { UserDocument } from '@/types/firestore';
+import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -33,8 +34,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // Import ImagePicker with fallback for environments where native module is not available
 let ImagePicker: typeof import('expo-image-picker') | null = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   ImagePicker = require('expo-image-picker');
-} catch (e) {
+} catch {
   console.warn('expo-image-picker native module not available');
 }
 
@@ -73,7 +75,7 @@ export function AddPostScreen() {
     if (!ImagePicker) {
       Alert.alert(
         t('addPost.permissionDenied'),
-        'Image picker is not available. Please rebuild the app with native modules.'
+        t('errors.imagePickerUnavailable')
       );
       return;
     }
@@ -105,7 +107,7 @@ export function AddPostScreen() {
       console.error('Image picker error:', error);
       Alert.alert(
         t('common.error'),
-        'Failed to open image picker. Please try again.'
+        t('errors.imagePickerError')
       );
     }
   };
@@ -351,8 +353,10 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
+    ...applyFont({
+      fontWeight: '600',
+      fontSize: 15,
+    }),
   },
   scrollView: {
     flex: 1,
@@ -365,14 +369,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   authorName: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
   authorUsername: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
   },
   contentInput: {
-    fontSize: 18,
+    ...applyFont({
+      fontSize: 18,
+    }),
     lineHeight: 24,
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -414,10 +424,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionLabel: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   anonymousNote: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
     paddingHorizontal: 16,
     paddingBottom: 16,
     marginTop: -8,
@@ -438,7 +452,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   charCount: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '500',
+    }),
   },
 });

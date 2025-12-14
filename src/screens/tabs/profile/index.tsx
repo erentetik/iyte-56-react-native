@@ -21,6 +21,7 @@ import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { ReportPostModal } from '@/screens/modal/report-post';
 import { PostDocument, UserDocument } from '@/types/firestore';
+import { applyFont } from '@/utils/apply-fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
@@ -30,6 +31,7 @@ import {
   Alert,
   FlatList,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -42,7 +44,7 @@ type ProfileTab = 'posts' | 'liked' | 'commented' | 'saved';
 /**
  * Format timestamp to relative time string
  */
-function formatTimestamp(timestamp: Timestamp | undefined): string {
+function formatTimestamp(timestamp: Timestamp | undefined, t: (key: string) => string): string {
   if (!timestamp) return '';
   
   const now = new Date();
@@ -53,10 +55,10 @@ function formatTimestamp(timestamp: Timestamp | undefined): string {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
   
-  if (diffSeconds < 60) return `${diffSeconds}s`;
-  if (diffMinutes < 60) return `${diffMinutes}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
+  if (diffSeconds < 60) return `${diffSeconds}${t('time.seconds')}`;
+  if (diffMinutes < 60) return `${diffMinutes}${t('time.minutes')}`;
+  if (diffHours < 24) return `${diffHours}${t('time.hours')}`;
+  if (diffDays < 7) return `${diffDays}${t('time.days')}`;
   
   return postDate.toLocaleDateString();
 }
@@ -64,7 +66,7 @@ function formatTimestamp(timestamp: Timestamp | undefined): string {
 /**
  * Transform PostDocument to TweetData
  */
-function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isReported: boolean): TweetData {
+function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isReported: boolean, t: (key: string) => string): TweetData {
   return {
     id: post.id,
     author: {
@@ -72,7 +74,7 @@ function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isR
       username: post.authorUsername,
     },
     content: post.content,
-    timestamp: formatTimestamp(post.createdAt),
+    timestamp: formatTimestamp(post.createdAt, t),
     likes: post.likesCount,
     replies: post.commentsCount,
     isLiked,
@@ -120,7 +122,7 @@ export function ProfileScreen() {
   }, [user?.uid]);
 
   // Fetch user profile
-  const { data: userProfile, isLoading: isLoadingProfile } = useUser(userId || undefined);
+  const { data: userProfile } = useUser(userId || undefined);
 
   // Fetch user's posts
   const {
@@ -330,9 +332,9 @@ export function ProfileScreen() {
       });
     } catch (error: any) {
       console.error('Error deleting post:', error);
-      Alert.alert('Error', error?.message || 'Failed to delete post');
+      Alert.alert(t('common.error'), error?.message || t('postOptions.deleteError'));
     }
-  }, [currentUserProfile, user?.uid, deletePostMutation]);
+  }, [currentUserProfile, user?.uid, deletePostMutation, t]);
 
   // Handle report action
   const handleReport = useCallback((post: PostDocument) => {
@@ -374,7 +376,7 @@ export function ProfileScreen() {
       const isReported = reportedPostIdsSet?.has(item.id) ?? false;
       const isOwnPost = !!(user?.uid && item.authorId === user.uid);
       
-      const tweet = postToTweet(item, isLiked, isSaved, isReported);
+      const tweet = postToTweet(item, isLiked, isSaved, isReported, t);
       return (
         <Tweet
           tweet={tweet}
@@ -388,7 +390,7 @@ export function ProfileScreen() {
         />
       );
     },
-    [handlePostPress, handleLike, handleSave, handleReport, handleDelete, user?.uid, likedPostIdsSet, savedPostIdsSet, reportedPostIdsSet]
+    [handlePostPress, handleLike, handleSave, handleReport, handleDelete, user?.uid, likedPostIdsSet, savedPostIdsSet, reportedPostIdsSet, t]
   );
 
   // Render footer (loading indicator for pagination)
@@ -477,52 +479,61 @@ export function ProfileScreen() {
     return (
       <View style={styles.profileSection}>
         <View style={styles.profileDetails}>
-          <Text style={[styles.name, { color: colors.neutral[12] }]}>
-            {userProfile?.displayName || t('addPost.user')}
-          </Text>
-          <Text style={[styles.username, { color: colors.orange[9] }]}>
-            @{userProfile?.username || 'user'}
-          </Text>
+          <View style={styles.nameRow}>
+            <View style={styles.nameContainer}>
+              <Text style={[styles.name, { color: colors.neutral[12] }]}>
+                {userProfile?.displayName || t('addPost.user')}
+              </Text>
+              <Text style={[styles.username, { color: colors.orange[9] }]}>
+                @{userProfile?.username || 'user'}
+              </Text>
+            </View>
+            <View style={styles.statsInline}>
+              <TouchableOpacity style={styles.statItemInline}>
+                <Text style={[styles.statNumberInline, { color: colors.neutral[12] }]}>
+                  {userProfile?.postsCount || 0}
+                </Text>
+                <Text style={[styles.statLabelInline, { color: colors.neutral[9] }]}>
+                  {t('tabs.profile.tweets')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.statItemInline}>
+                <Text style={[styles.statNumberInline, { color: colors.neutral[12] }]}>
+                  {userProfile?.followingCount || 0}
+                </Text>
+                <Text style={[styles.statLabelInline, { color: colors.neutral[9] }]}>
+                  {t('tabs.profile.following')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.statItemInline}>
+                <Text style={[styles.statNumberInline, { color: colors.neutral[12] }]}>
+                  {userProfile?.followersCount || 0}
+                </Text>
+                <Text style={[styles.statLabelInline, { color: colors.neutral[9] }]}>
+                  {t('tabs.profile.followers')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           {userProfile?.bio && (
             <Text style={[styles.bio, { color: colors.neutral[12] }]}>
               {userProfile.bio}
             </Text>
           )}
         </View>
-        <View style={styles.stats}>
-          <TouchableOpacity style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.neutral[12] }]}>
-              {userProfile?.postsCount || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.neutral[9] }]}>
-              {t('tabs.profile.tweets')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.neutral[12] }]}>
-              {userProfile?.followingCount || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.neutral[9] }]}>
-              {t('tabs.profile.following')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.neutral[12] }]}>
-              {userProfile?.followersCount || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.neutral[9] }]}>
-              {t('tabs.profile.followers')}
-            </Text>
-          </TouchableOpacity>
-        </View>
         
         {/* Tab Bar */}
-        <View style={[styles.tabBar, { borderBottomColor: colors.neutral[6] }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.tabBarContainer, { borderBottomColor: colors.neutral[6] }]}
+          contentContainerStyle={styles.tabBarContent}
+        >
           {renderTabButton('posts', t('tabs.profile.myPosts'), 'doc.text')}
           {renderTabButton('liked', t('tabs.profile.liked'), 'heart')}
           {renderTabButton('commented', t('tabs.profile.commented'), 'message')}
           {renderTabButton('saved', t('tabs.profile.saved'), 'bookmark')}
-        </View>
+        </ScrollView>
       </View>
     );
   }, [userProfile, colors, t, renderTabButton]);
@@ -594,8 +605,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 20,
+      fontWeight: '700',
+    }),
   },
   profileSection: {
     paddingHorizontal: 16,
@@ -604,17 +617,54 @@ const styles = StyleSheet.create({
   profileDetails: {
     marginBottom: 16,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  nameContainer: {
+    flex: 1,
+    minWidth: 120,
+    justifyContent: 'center',
+  },
   name: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 4,
+    ...applyFont({
+      fontSize: 22,
+      fontWeight: '700',
+    }),
+    marginBottom: 2,
+  },
+  statsInline: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statItemInline: {
+    alignItems: 'center',
+  },
+  statNumberInline: {
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '700',
+    }),
+  },
+  statLabelInline: {
+    ...applyFont({
+      fontSize: 11,
+    }),
+    marginTop: 2,
   },
   username: {
-    fontSize: 16,
-    marginBottom: 12,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   bio: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     lineHeight: 20,
   },
   stats: {
@@ -627,30 +677,42 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statNumber: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 15,
+      fontWeight: '700',
+    }),
   },
   statLabel: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
   },
-  tabBar: {
-    flexDirection: 'row',
+  tabBarContainer: {
     borderBottomWidth: 1,
     marginHorizontal: -16,
   },
+  tabBarContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+  },
   tabButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 16,
     gap: 6,
+    minWidth: 100,
   },
   tabLabel: {
-    fontSize: 13,
+    ...applyFont({
+      fontSize: 13,
+    }),
   },
   tabLabelActive: {
-    fontWeight: '600',
+    ...applyFont({
+      fontWeight: '600',
+    }),
   },
   loadingInScroll: {
     paddingVertical: 64,
@@ -662,7 +724,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     marginTop: 16,
     textAlign: 'center',
   },

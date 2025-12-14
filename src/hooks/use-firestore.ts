@@ -83,6 +83,8 @@ export function useCollection<T extends DocumentData>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const constraintsString = JSON.stringify(constraints);
+
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -108,7 +110,7 @@ export function useCollection<T extends DocumentData>(
           setLoading(false);
         });
     }
-  }, [collectionName, realtime, JSON.stringify(constraints)]);
+  }, [collectionName, realtime, constraintsString, constraints]);
 
   const refetch = useCallback(async () => {
     setLoading(true);

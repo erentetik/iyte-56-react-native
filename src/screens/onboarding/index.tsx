@@ -7,6 +7,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { applyFont } from '@/utils/apply-fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -190,11 +191,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   logo: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...applyFont({
+      fontSize: 24,
+      fontWeight: '800',
+    }),
   },
   skipText: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
   },
   slide: {
     flex: 1,
@@ -211,13 +216,17 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 28,
+      fontWeight: '700',
+    }),
     textAlign: 'center',
     marginBottom: 16,
   },
   description: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -246,8 +255,10 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 18,
+      fontWeight: '600',
+    }),
   },
 });
 

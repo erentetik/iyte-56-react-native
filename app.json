@@ -38,6 +38,17 @@
       "expo-router",
       "expo-localization"
     ],
+    "fonts": [
+      "./assets/fonts/SF-Pro-Rounded-Thin.otf",
+      "./assets/fonts/SF-Pro-Rounded-Ultralight.otf",
+      "./assets/fonts/SF-Pro-Rounded-Light.otf",
+      "./assets/fonts/SF-Pro-Rounded-Regular.otf",
+      "./assets/fonts/SF-Pro-Rounded-Medium.otf",
+      "./assets/fonts/SF-Pro-Rounded-Semibold.otf",
+      "./assets/fonts/SF-Pro-Rounded-Bold.otf",
+      "./assets/fonts/SF-Pro-Rounded-Heavy.otf",
+      "./assets/fonts/SF-Pro-Rounded-Black.otf"
+    ],
     "splash": {
       "resizeMode": "native",
       "backgroundColor": "#ffffff"
@@ -47,10 +58,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "ea71702b-7646-4b8b-b399-d059359eec28"
-      }
+      "router": {}
     },
     "owner": "erentetk"
   }

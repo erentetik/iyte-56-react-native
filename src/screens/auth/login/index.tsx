@@ -3,6 +3,8 @@ import { IS_DEV } from '@/config/dev';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { applyFont } from '@/utils/apply-fonts';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,9 +15,14 @@ const EMAIL_DOMAIN = IS_DEV ? '@gmail.com' : '@std.iyte.edu.tr';
 export function LoginScreen() {
   const colors = useThemeColors();
   const { t } = useLanguage();
-  const { sendSignInLink } = useAuth();
+  const router = useRouter();
+  const { sendSignInLink, signInWithEmailAndPassword } = useAuth();
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Check if adminapple is entered
+  const isAdminApple = username.trim().toLowerCase() === 'adminapple';
 
   // Construct full email from username + domain
   const getFullEmail = () => `${username.trim().toLowerCase()}${EMAIL_DOMAIN}`;
@@ -23,6 +30,35 @@ export function LoginScreen() {
   const handleSendLink = async () => {
     if (!username.trim()) {
       Alert.alert(t('auth.login.error'), t('auth.login.enterUsername'));
+      return;
+    }
+
+    // Handle adminapple login with password
+    if (isAdminApple) {
+      if (!password.trim()) {
+        Alert.alert(t('auth.login.error'), t('auth.login.passwordRequired'));
+        return;
+      }
+      
+      if (password !== 'adminapple123') {
+        Alert.alert(t('auth.login.error'), t('auth.login.invalidPassword'));
+        return;
+      }
+
+      try {
+        setLoading(true);
+        // Sign in with email and password for adminapple
+        await signInWithEmailAndPassword('adminapple@std.iyte.edu.tr', password);
+        // Wait a bit for auth state to update and user profile to be created
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Navigation will happen automatically via auth state change
+        // But we can also manually navigate as fallback
+        router.replace('/(tabs)');
+      } catch (error: any) {
+        Alert.alert(t('auth.login.error'), error.message || t('auth.login.signInError'));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -56,7 +92,7 @@ export function LoginScreen() {
     if (supported) {
       await Linking.openURL(url);
     } else {
-      Alert.alert(t('common.error'), `Cannot open ${url}`);
+      Alert.alert(t('common.error'), `${t('errors.cannotOpenUrl')} ${url}`);
     }
   };
 
@@ -84,14 +120,23 @@ export function LoginScreen() {
                   placeholder={IS_DEV ? 'example' : 'johndoe'}
                   placeholderTextColor={colors.neutral[9]}
                   value={username}
-                  onChangeText={(text) => setUsername(text.replace('@', ''))}
+                  onChangeText={(text) => {
+                    const newUsername = text.replace('@', '');
+                    setUsername(newUsername);
+                    // Clear password when username changes away from adminapple
+                    if (newUsername.trim().toLowerCase() !== 'adminapple') {
+                      setPassword('');
+                    }
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
+                {!isAdminApple && (
                 <Text style={[styles.domainText, { color: colors.neutral[12] }]}>
                   {EMAIL_DOMAIN}
                 </Text>
+                )}
               </View>
               <Text style={[styles.hint, { color: colors.neutral[8] }]}>
                 {IS_DEV 
@@ -101,14 +146,35 @@ export function LoginScreen() {
               </Text>
             </View>
 
+            {isAdminApple && (
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: colors.neutral[12] }]}>{t('auth.login.password')}</Text>
+                <View style={[styles.emailInputContainer, { borderColor: colors.neutral[6], backgroundColor: colors.neutral[3] }]}>
+                  <TextInput
+                    style={[styles.usernameInput, { color: colors.neutral[12] }]}
+                    placeholder={t('auth.login.passwordPlaceholder')}
+                    placeholderTextColor={colors.neutral[9]}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+            )}
+
             <Button
               variant="default"
               size="lg"
               onPress={handleSendLink}
-              disabled={loading || !username.trim()}
+              disabled={loading || !username.trim() || (isAdminApple && !password.trim())}
               style={styles.button}
             >
-              {loading ? t('auth.login.sending') : t('auth.login.sendLink')}
+              {loading 
+                ? (isAdminApple ? t('auth.login.signingIn') : t('auth.login.sending'))
+                : (isAdminApple ? t('auth.login.signIn') : t('auth.login.sendLink'))
+              }
             </Button>
 
             <TouchableOpacity
@@ -143,17 +209,23 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logo: {
-    fontSize: 36,
-    fontWeight: '800',
+    ...applyFont({
+      fontSize: 36,
+      fontWeight: '800',
+    }),
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 28,
+      fontWeight: '700',
+    }),
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     marginBottom: 32,
     lineHeight: 22,
     textAlign: 'center',
@@ -165,8 +237,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '600',
+    }),
     marginBottom: 8,
   },
   emailInputContainer: {
@@ -179,15 +253,21 @@ const styles = StyleSheet.create({
   },
   usernameInput: {
     flex: 1,
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     height: '100%',
   },
   domainText: {
-    fontSize: 16,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '500',
+    }),
   },
   hint: {
-    fontSize: 12,
+    ...applyFont({
+      fontSize: 12,
+    }),
     marginTop: 8,
     lineHeight: 16,
   },
@@ -204,8 +284,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emailButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
 });
 

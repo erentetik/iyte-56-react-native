@@ -7,6 +7,7 @@ import trTranslations from '../locales/tr.json';
 function getDeviceLanguage(): string {
   try {
     // Try to use expo-localization if available
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Localization = require('expo-localization');
     const locales = Localization.getLocales();
     if (locales && locales.length > 0) {

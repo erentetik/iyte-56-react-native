@@ -7,6 +7,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { applyFont } from '@/utils/apply-fonts';
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -105,11 +106,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 24,
+      fontWeight: '700',
+    }),
   },
   message: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     lineHeight: 24,
     textAlign: 'center',
     marginBottom: 16,
@@ -125,8 +130,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   banWarningText: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 14,
+      fontWeight: '600',
+    }),
     flex: 1,
   },
   button: {
@@ -137,7 +144,9 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
 });

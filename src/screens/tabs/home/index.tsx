@@ -16,6 +16,7 @@ import { ReportPostModal } from '@/screens/modal/report-post';
 import { updateWarningShowed } from '@/services/users';
 import { getPendingWarningId, getWarningText } from '@/services/warnings';
 import { PostDocument, UserDocument } from '@/types/firestore';
+import { applyFont } from '@/utils/apply-fonts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
@@ -36,7 +37,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Format timestamp to relative time string
  */
-function formatTimestamp(timestamp: Timestamp | undefined): string {
+function formatTimestamp(timestamp: Timestamp | undefined, t: (key: string) => string): string {
   if (!timestamp) return '';
   
   const now = new Date();
@@ -47,10 +48,10 @@ function formatTimestamp(timestamp: Timestamp | undefined): string {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
   
-  if (diffSeconds < 60) return `${diffSeconds}s ago`;
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffSeconds < 60) return `${diffSeconds}${t('time.seconds')} ${t('time.ago')}`;
+  if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes > 1 ? t('time.minutesPlural') : t('time.minute')} ${t('time.ago')}`;
+  if (diffHours < 24) return `${diffHours} ${diffHours > 1 ? t('time.hoursPlural') : t('time.hour')} ${t('time.ago')}`;
+  if (diffDays < 7) return `${diffDays} ${diffDays > 1 ? t('time.daysPlural') : t('time.day')} ${t('time.ago')}`;
   
   return postDate.toLocaleDateString();
 }
@@ -63,6 +64,7 @@ function postToTweet(
   isLiked: boolean, 
   isSaved: boolean, 
   isReported: boolean,
+  t: (key: string) => string,
   // isFollowingAuthor: boolean
 ): TweetData {
   return {
@@ -75,7 +77,7 @@ function postToTweet(
       isAdmin: post.authorIsAdmin,
     },
     content: post.content,
-    timestamp: formatTimestamp(post.createdAt),
+    timestamp: formatTimestamp(post.createdAt, t),
     likes: post.likesCount,
     replies: post.commentsCount,
     isLiked,
@@ -315,9 +317,9 @@ export function HomeScreen() {
       });
     } catch (error: any) {
       console.error('Error deleting post:', error);
-      Alert.alert('Error', error?.message || 'Failed to delete post');
+      Alert.alert(t('common.error'), error?.message || t('postOptions.deleteError'));
     }
-  }, [userProfile, user?.uid, deletePostMutation]);
+  }, [userProfile, user?.uid, deletePostMutation, t]);
   
   // Handle report action
   const handleReport = useCallback((post: PostDocument) => {
@@ -413,7 +415,7 @@ export function HomeScreen() {
       const isOwnPost = !!(user?.uid && item.authorId === user.uid);
       // const isFollowingAuthor = followingIdsSet.has(item.authorId);
       
-      const tweet = postToTweet(item, isLiked, isSaved, isReported /*, isFollowingAuthor */);
+      const tweet = postToTweet(item, isLiked, isSaved, isReported, t /*, isFollowingAuthor */);
       
       return (
         <Tweet
@@ -430,7 +432,7 @@ export function HomeScreen() {
         />
       );
     },
-    [likedPostIds, savedPostIds, reportedPostIds, user?.uid, handlePostPress, handleLike, handleReply, handleSave, handleReport, handleDelete /*, followingIdsSet, handleFollow */]
+    [likedPostIds, savedPostIds, reportedPostIds, user?.uid, handlePostPress, handleLike, handleReply, handleSave, handleReport, handleDelete, t /*, followingIdsSet, handleFollow */]
   );
   
   // Render footer (loading indicator for pagination)
@@ -448,7 +450,7 @@ export function HomeScreen() {
   const renderEmpty = useCallback(() => {
     if (isLoading) return null;
     
-    let message = searchQuery ? 'No posts found' : t('tabs.home.empty');
+    let message = searchQuery ? t('tabs.home.noPostsFound') : t('tabs.home.empty');
     // if (activeTab === 'follow' && !searchQuery) {
     //   message = 'Follow users to see their posts here';
     // }
@@ -499,7 +501,7 @@ export function HomeScreen() {
             <IconSymbol name="magnifyingglass" size={18} color={colors.neutral[9]} />
             <TextInput
               style={[styles.searchInput, { color: colors.neutral[12] }]}
-              placeholder="Search posts..."
+              placeholder={t('search.placeholder')}
               placeholderTextColor={colors.neutral[9]}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -530,7 +532,7 @@ export function HomeScreen() {
               activeTab === 'featured' && styles.tabTextActive,
             ]}
           >
-            Featured
+            {t('tabs.home.featured')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -547,7 +549,7 @@ export function HomeScreen() {
               activeTab === 'latest' && styles.tabTextActive,
             ]}
           >
-            Latest
+            {t('tabs.home.latest')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -639,8 +641,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 24,
+      fontWeight: '700',
+    }),
   },
   headerIcon: {
     padding: 4,
@@ -661,7 +665,9 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     padding: 0,
   },
   tabBar: {
@@ -679,10 +685,14 @@ const styles = StyleSheet.create({
     // Handled inline
   },
   tabText: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
   },
   tabTextActive: {
-    fontWeight: '600',
+    ...applyFont({
+      fontWeight: '600',
+    }),
   },
   listContent: {
     paddingBottom: 16,
@@ -699,7 +709,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   errorText: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
@@ -711,8 +723,10 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    ...applyFont({
+      fontWeight: '600',
+      fontSize: 16,
+    }),
   },
   emptyContainer: {
     flex: 1,
@@ -721,7 +735,9 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
   },
   emptyText: {
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     marginTop: 16,
     textAlign: 'center',
   },

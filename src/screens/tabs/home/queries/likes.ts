@@ -93,9 +93,6 @@ export async function checkUserLikesForPosts(
 ): Promise<Set<string>> {
   if (postIds.length === 0) return new Set();
   
-  // Create like IDs to check
-  const likeIds = postIds.map(postId => `${postId}_${userId}`);
-  
   // Firestore doesn't support batch get by ID in collections,
   // so we query by postId and userId
   const likesRef = collection(db, COLLECTIONS.POST_LIKES);
@@ -166,16 +163,22 @@ export async function likePost(
     const postData = postSnap.data() as PostDocument;
     if (postData.authorId !== user.id) {
       try {
-        await createNotification({
+        const notificationData: any = {
           userId: postData.authorId,
           type: 'like',
           actorId: user.id,
           actorUsername: user.username,
           actorDisplayName: user.displayName,
-          actorAvatar: user.avatar,
           postId: postId,
           postContent: postData.content.substring(0, 100),
-        });
+        };
+        
+        // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
+        if (user.avatar) {
+          notificationData.actorAvatar = user.avatar;
+        }
+        
+        await createNotification(notificationData);
       } catch (error) {
         console.error('Error creating like notification:', error);
         // Don't fail the like operation if notification fails

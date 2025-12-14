@@ -12,6 +12,7 @@ import { queryClient, queryKeys } from '@/hooks/queries/query-client';
 import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { updateUser } from '@/services/users';
+import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -31,7 +32,7 @@ export function SetupScreen() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
-  const { data: userProfile, refetch } = useUser(user?.uid);
+  const { refetch } = useUser(user?.uid);
   
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -218,18 +219,24 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logo: {
-    fontSize: 36,
-    fontWeight: '800',
+    ...applyFont({
+      fontSize: 36,
+      fontWeight: '800',
+    }),
     marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 28,
+      fontWeight: '700',
+    }),
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -253,22 +260,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   atSymbol: {
-    fontSize: 16,
-    fontWeight: '500',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '500',
+    }),
     marginRight: 8,
   },
   usernameInput: {
     flex: 1,
-    fontSize: 16,
+    ...applyFont({
+      fontSize: 16,
+    }),
     height: '100%',
   },
   errorText: {
-    fontSize: 12,
+    ...applyFont({
+      fontSize: 12,
+    }),
     marginTop: 8,
     lineHeight: 16,
   },
   hint: {
-    fontSize: 12,
+    ...applyFont({
+      fontSize: 12,
+    }),
     marginTop: 8,
     lineHeight: 16,
   },

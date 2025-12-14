@@ -1,17 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { Image } from 'expo-image';
-import { Slot, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import 'react-native-reanimated';
-
-// Prevent the native splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
-
+import { Text } from '@/components/ui/text';
+import { fonts } from '@/config/fonts';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
@@ -21,6 +9,21 @@ import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { getExpoPushToken, markNotificationPermissionAsked, saveFCMToken } from '@/services/notifications';
 import { getPendingWarningId, getWarningText } from '@/services/warnings';
+import { applyFont } from '@/utils/apply-fonts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import 'react-native-reanimated';
+
+// Prevent the native splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 const ONBOARDING_KEY = 'isOnboardingViewed';
 
@@ -29,16 +32,7 @@ function SplashOverlay() {
   
   return (
     <View style={[styles.splashOverlay, { backgroundColor: colors.background }]}>
-      <Image
-        source={require('@/assets/app_logo.png')}
-        style={styles.logo}
-        contentFit="contain"
-      />
-      <ActivityIndicator
-        size="large"
-        color={colors.orange[9]}
-        style={styles.loader}
-      />
+      <Text style={[styles.logo, { color: colors.orange[9] }]}>ORTALIK 56</Text>
     </View>
   );
 }
@@ -193,32 +187,84 @@ function RootLayoutNav() {
     } else if (!user && inTabs) {
       router.replace('/(auth)/login');
     }
-  }, [user, userProfile, loading, segments, showSplash, onboardingChecked]);
+  }, [user, userProfile, loading, segments, showSplash, onboardingChecked, router]);
 
   return (
     <NavigationThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <View style={styles.container}>
-        <Slot />
-        {showSplash && <SplashOverlay />}
-      </View>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: true,
+          fullScreenGestureEnabled: Platform.OS === 'ios',
+          animation: Platform.OS === 'ios' ? 'default' : 'slide_from_right',
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+        <Stack.Screen 
+          name="edit-profile" 
+          options={{ 
+            gestureEnabled: true,
+            fullScreenGestureEnabled: Platform.OS === 'ios',
+          }} 
+        />
+        <Stack.Screen 
+          name="settings" 
+          options={{ 
+            gestureEnabled: true,
+            fullScreenGestureEnabled: Platform.OS === 'ios',
+          }} 
+        />
+        <Stack.Screen 
+          name="add-post" 
+          options={{ 
+            gestureEnabled: true,
+            fullScreenGestureEnabled: Platform.OS === 'ios',
+          }} 
+        />
+        <Stack.Screen 
+          name="post/[postId]" 
+          options={{ 
+            gestureEnabled: true,
+            fullScreenGestureEnabled: Platform.OS === 'ios',
+          }} 
+        />
+      </Stack>
+      {showSplash && <SplashOverlay />}
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </NavigationThemeProvider>
   );
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(fonts);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      // Fonts are loaded (or failed), we can hide splash screen
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <LanguageProvider>
-          <WarningProvider>
-            <AuthProvider>
-              <RootLayoutNav />
-            </AuthProvider>
-          </WarningProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <LanguageProvider>
+            <WarningProvider>
+              <AuthProvider>
+                <RootLayoutNav />
+              </AuthProvider>
+            </WarningProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -233,9 +279,10 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 32,
+    ...applyFont({
+      fontSize: 48,
+      fontWeight: '800',
+    }),
   },
   loader: {
     marginTop: 24,

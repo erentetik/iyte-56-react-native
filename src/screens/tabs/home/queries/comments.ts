@@ -275,7 +275,6 @@ export async function createComment(
     authorId: author.id,
     authorUsername: author.username || 'user',
     authorDisplayName: author.displayName || 'User',
-    authorAvatar: author.avatar || undefined,
     authorIsVerified: author.isVerified || false,
     authorIsAdmin: author.isAdmin || false,
     
@@ -296,6 +295,11 @@ export async function createComment(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
+  
+  // Only include authorAvatar if it exists (Firestore doesn't allow undefined)
+  if (author.avatar) {
+    commentData.authorAvatar = author.avatar;
+  }
   
   console.log('Creating comment with data:', commentData);
   
@@ -335,17 +339,23 @@ export async function createComment(
               ? (postSnap.data() as PostDocument).content.substring(0, 100)
               : undefined;
             
-            await createNotification({
+            const notificationData: any = {
               userId: parentComment.authorId,
               type: 'reply',
               actorId: author.id,
               actorUsername: author.username,
               actorDisplayName: author.displayName,
-              actorAvatar: author.avatar,
               postId: postId,
               commentId: input.parentCommentId,
               postContent,
-            });
+            };
+            
+            // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
+            if (author.avatar) {
+              notificationData.actorAvatar = author.avatar;
+            }
+            
+            await createNotification(notificationData);
           } catch (error) {
             console.error('Error creating reply notification:', error);
           }
@@ -363,17 +373,23 @@ export async function createComment(
         const postData = postSnap.data() as PostDocument;
         // Create notification if post author is different from comment author
         if (postData.authorId !== author.id) {
-          await createNotification({
+          const notificationData: any = {
             userId: postData.authorId,
             type: 'comment',
             actorId: author.id,
             actorUsername: author.username,
             actorDisplayName: author.displayName,
-            actorAvatar: author.avatar,
             postId: postId,
             commentId: docRef.id,
             postContent: postData.content.substring(0, 100),
-          });
+          };
+          
+          // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
+          if (author.avatar) {
+            notificationData.actorAvatar = author.avatar;
+          }
+          
+          await createNotification(notificationData);
         }
       }
     } catch (error) {

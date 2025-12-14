@@ -1,4 +1,5 @@
-import { ColorValue, Platform } from 'react-native';
+import { FONT_FAMILY } from '@/config/fonts';
+import { ColorValue } from 'react-native';
 import { darkColors, lightColors } from './colors';
 
 export type Theme = {
@@ -45,27 +46,15 @@ export const Colors = {
   },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const Fonts = {
+  /** SF Pro Rounded font family */
+  rounded: FONT_FAMILY,
+  /** Default font (SF Pro Rounded) */
+  default: FONT_FAMILY,
+  /** Sans font (SF Pro Rounded) */
+  sans: FONT_FAMILY,
+  /** Serif font (SF Pro Rounded) */
+  serif: FONT_FAMILY,
+  /** Monospace font (SF Pro Rounded) */
+  mono: FONT_FAMILY,
+};

@@ -108,7 +108,7 @@ export function useToggleLike() {
           return Array.isArray(key) && key.includes('batch') && key.includes(user.id);
         },
       });
-      const previousBatchQueries: Array<[readonly unknown[], unknown]> = batchQueries.map(([key, data]) => [key, data]);
+      const previousBatchQueries: [readonly unknown[], unknown][] = batchQueries.map(([key, data]) => [key, data]);
       
       // Get feed queries to snapshot them
       const feedQueries = queryClient.getQueriesData({
@@ -118,7 +118,7 @@ export function useToggleLike() {
           return Array.isArray(key) && (key.includes('public') || key.includes('featured') || key.includes('latest') || key.includes('following'));
         },
       });
-      const previousFeedQueries: Array<[readonly unknown[], unknown]> = feedQueries.map(([key, data]) => [key, data]);
+      const previousFeedQueries: [readonly unknown[], unknown][] = feedQueries.map(([key, data]) => [key, data]);
       
       // Optimistically update like status
       const newLikeStatus = !previousLikeStatus;

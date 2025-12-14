@@ -8,7 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useReportPost } from '@/hooks/queries/use-reports';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { PostDocument, ReportReason, UserDocument } from '@/types/firestore';
-import { useRouter } from 'expo-router';
+import { applyFont } from '@/utils/apply-fonts';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
@@ -45,7 +45,6 @@ const REPORT_REASONS: { value: ReportReason; label: { en: string; tr: string } }
 export function ReportPostModal({ visible, post, author, reporter, onClose }: ReportPostModalProps) {
   const colors = useThemeColors();
   const { t, language } = useLanguage();
-  const router = useRouter();
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,7 +151,9 @@ export function ReportPostModal({ visible, post, author, reporter, onClose }: Re
                         styles.reasonText,
                         {
                           color: isSelected ? colors.orange[9] : colors.neutral[12],
-                          fontWeight: isSelected ? '600' : '400',
+                          ...applyFont({
+                            fontWeight: isSelected ? '600' : '400',
+                          }),
                         },
                       ]}
                     >
@@ -244,15 +245,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...applyFont({
+      fontSize: 20,
+      fontWeight: '700',
+    }),
   },
   closeButton: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
   subtitle: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     marginBottom: 20,
   },
   reasonsContainer: {
@@ -266,19 +273,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   reasonText: {
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
   },
   descriptionContainer: {
     marginBottom: 20,
   },
   descriptionLabel: {
-    fontSize: 14,
+    ...applyFont({
+      fontSize: 14,
+    }),
     marginBottom: 8,
   },
   descriptionInput: {
     borderRadius: 12,
     padding: 12,
-    fontSize: 15,
+    ...applyFont({
+      fontSize: 15,
+    }),
     minHeight: 100,
     textAlignVertical: 'top',
     borderWidth: 1,
@@ -295,8 +308,10 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...applyFont({
+      fontSize: 16,
+      fontWeight: '600',
+    }),
   },
 });
 
