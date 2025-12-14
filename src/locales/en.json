@@ -129,7 +129,21 @@
     "checkEmail": "Check IYTE Email",
     "legal": "Legal",
     "privacyPolicy": "Privacy Policy",
-    "termsOfUse": "Terms of Use"
+    "termsOfUse": "Terms of Use",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "Delete Account",
+    "deleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone. All your posts, comments, and data will be permanently deleted.",
+    "deleteAccountError": "An error occurred while deleting your account",
+    "blockedUsers": "Blocked Users",
+    "blockedUsersCount": "{{count}} Blocked User",
+    "blockedUsersCount_plural": "{{count}} Blocked Users",
+    "unblockAll": "Unblock All",
+    "unblockAllConfirm": "Unblock All Users",
+    "unblockAllMessage": "Are you sure you want to unblock all {{count}} user(s)?",
+    "unblockAllSuccess": "All users have been unblocked",
+    "unblockAllError": "An error occurred while unblocking users",
+    "noBlockedUsers": "No Blocked Users",
+    "noBlockedUsersMessage": "You don't have any blocked users"
   },
   "editProfile": {
     "title": "Edit Profile",
@@ -193,6 +207,7 @@
   },
   "common": {
     "error": "An error occurred",
+    "success": "Success",
     "ok": "OK",
     "cancel": "Cancel",
     "retry": "Try Again",
@@ -207,7 +222,12 @@
     "deleteTitle": "Delete Post",
     "deleteMessage": "Are you sure you want to delete this post? This action cannot be undone.",
     "deleteError": "Failed to delete post",
-    "comments": "Comments"
+    "comments": "Comments",
+    "blockUser": "Block User",
+    "blockUserConfirm": "Block User",
+    "blockUserMessage": "Are you sure you want to block @{{username}}? You won't see their posts in your feed.",
+    "blockUserSuccess": "User has been blocked",
+    "blockUserError": "Failed to block user"
   },
   "search": {
     "placeholder": "Search posts..."

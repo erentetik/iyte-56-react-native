@@ -8,10 +8,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { Language, useLanguage } from '@/contexts/LanguageContext';
 import { ThemeMode, useTheme } from '@/contexts/ThemeContext';
+import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { getBlockedUsersCount, unblockAllUsers } from '@/services/users';
 import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
@@ -77,8 +79,10 @@ export function SettingsScreen() {
   const colors = useThemeColors();
   const { t, language, setLanguage } = useLanguage();
   const { themeMode, setThemeMode } = useTheme();
-  const { signOut } = useAuth();
+  const { signOut, deleteAccount, user } = useAuth();
   const router = useRouter();
+  const { data: userProfile } = useUser(user?.uid);
+  const [blockedCount, setBlockedCount] = useState<number | null>(null);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -178,6 +182,82 @@ export function SettingsScreen() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('settings.deleteAccountConfirm'),
+      t('settings.deleteAccountMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              // User will be automatically signed out after account deletion
+            } catch (error) {
+              Alert.alert(t('common.error'), t('settings.deleteAccountError'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Load blocked users count on mount
+  React.useEffect(() => {
+    const loadBlockedCount = async () => {
+      if (user?.uid) {
+        try {
+          const count = await getBlockedUsersCount(user.uid);
+          setBlockedCount(count);
+        } catch (error) {
+          console.error('Error loading blocked users count:', error);
+        }
+      }
+    };
+    loadBlockedCount();
+  }, [user?.uid, userProfile?.blockedUsers]);
+
+  // Update count when userProfile changes
+  React.useEffect(() => {
+    if (userProfile?.blockedUsers) {
+      setBlockedCount(userProfile.blockedUsers.length);
+    } else {
+      setBlockedCount(0);
+    }
+  }, [userProfile?.blockedUsers]);
+
+  const handleUnblockAll = () => {
+    if (!user?.uid) return;
+    
+    const count = blockedCount || 0;
+    if (count === 0) {
+      Alert.alert(t('settings.noBlockedUsers'), t('settings.noBlockedUsersMessage'));
+      return;
+    }
+
+    Alert.alert(
+      t('settings.unblockAllConfirm'),
+      t('settings.unblockAllMessage').replace('{{count}}', count.toString()),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.unblockAll'),
+          onPress: async () => {
+            try {
+              await unblockAllUsers(user.uid);
+              setBlockedCount(0);
+              Alert.alert(t('common.success'), t('settings.unblockAllSuccess'));
+            } catch (error) {
+              Alert.alert(t('common.error'), t('settings.unblockAllError'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -237,6 +317,34 @@ export function SettingsScreen() {
           </View>
         </View>
 
+        {/* Blocked Users Section */}
+        {blockedCount !== null && blockedCount > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.neutral[9] }]}>
+              {t('settings.blockedUsers')}
+            </Text>
+            <View style={[styles.sectionContent, { backgroundColor: colors.neutral[2] }]}>
+              <SettingsItem
+                icon="person.fill.xmark"
+                label={(() => {
+                  const countStr = blockedCount.toString();
+                  return blockedCount === 1 
+                    ? t('settings.blockedUsersCount').replace('{{count}}', countStr)
+                    : t('settings.blockedUsersCount_plural').replace('{{count}}', countStr);
+                })()}
+                onPress={handleUnblockAll}
+                value={blockedCount.toString()}
+              />
+              <SettingsItem
+                icon="arrow.uturn.backward"
+                label={t('settings.unblockAll')}
+                onPress={handleUnblockAll}
+                color={colors.orange[9]}
+              />
+            </View>
+          </View>
+        )}
+
         {/* Legal Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.neutral[9] }]}>
@@ -246,12 +354,12 @@ export function SettingsScreen() {
             <SettingsItem
               icon="doc.text"
               label={t('settings.privacyPolicy')}
-              onPress={() => router.push('/legal?type=privacy')}
+              onPress={() => router.push('/legal?type=privacy&url=https://iyte-2b16f.web.app/privacy')}
             />
             <SettingsItem
               icon="doc.text"
               label={t('settings.termsOfUse')}
-              onPress={() => router.push('/legal?type=terms')}
+              onPress={() => router.push('/legal?type=terms&url=https://iyte-2b16f.web.app/terms')}
             />
           </View>
         </View>
@@ -263,6 +371,13 @@ export function SettingsScreen() {
               icon="rectangle.portrait.and.arrow.right"
               label={t('tabs.profile.signOut')}
               onPress={handleSignOut}
+              color="#ef4444"
+              showArrow={false}
+            />
+            <SettingsItem
+              icon="trash.fill"
+              label={t('settings.deleteAccount')}
+              onPress={handleDeleteAccount}
               color="#ef4444"
               showArrow={false}
             />

@@ -129,7 +129,21 @@
     "checkEmail": "IYTE E-Posta Kontrol Et",
     "legal": "Yasal",
     "privacyPolicy": "Gizlilik Politikası",
-    "termsOfUse": "Kullanım Şartları"
+    "termsOfUse": "Kullanım Şartları",
+    "deleteAccount": "Hesabı Sil",
+    "deleteAccountConfirm": "Hesabı Sil",
+    "deleteAccountMessage": "Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz. Tüm gönderileriniz, yorumlarınız ve verileriniz kalıcı olarak silinecektir.",
+    "deleteAccountError": "Hesap silinirken bir hata oluştu",
+    "blockedUsers": "Engellenen Kullanıcılar",
+    "blockedUsersCount": "{{count}} Engellenen Kullanıcı",
+    "blockedUsersCount_plural": "{{count}} Engellenen Kullanıcı",
+    "unblockAll": "Tümünü Engellemeyi Kaldır",
+    "unblockAllConfirm": "Tüm Kullanıcıları Engellemeyi Kaldır",
+    "unblockAllMessage": "{{count}} kullanıcının engellemesini kaldırmak istediğinize emin misiniz?",
+    "unblockAllSuccess": "Tüm kullanıcıların engellemesi kaldırıldı",
+    "unblockAllError": "Kullanıcıların engellemesi kaldırılırken bir hata oluştu",
+    "noBlockedUsers": "Engellenen Kullanıcı Yok",
+    "noBlockedUsersMessage": "Engellenen kullanıcınız yok"
   },
   "editProfile": {
     "title": "Profili Düzenle",
@@ -193,6 +207,7 @@
   },
   "common": {
     "error": "Bir hata oluştu",
+    "success": "Başarılı",
     "ok": "Tamam",
     "cancel": "İptal",
     "retry": "Tekrar Dene",
@@ -207,7 +222,12 @@
     "deleteTitle": "Gönderiyi Sil",
     "deleteMessage": "Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
     "deleteError": "Gönderi silinemedi",
-    "comments": "Yorumlar"
+    "comments": "Yorumlar",
+    "blockUser": "Kullanıcıyı Engelle",
+    "blockUserConfirm": "Kullanıcıyı Engelle",
+    "blockUserMessage": "@{{username}} kullanıcısını engellemek istediğinize emin misiniz? Artık gönderilerini görmeyeceksiniz.",
+    "blockUserSuccess": "Kullanıcı engellendi",
+    "blockUserError": "Kullanıcı engellenemedi"
   },
   "search": {
     "placeholder": "Gönderilerde ara..."

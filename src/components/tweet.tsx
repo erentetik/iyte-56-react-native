@@ -12,6 +12,7 @@ import { IconSymbol } from './ui/icon-symbol';
 export interface TweetData {
   id: string;
   author: {
+    id?: string; // Author user ID
     name: string;
     username: string;
     avatar?: string;
@@ -36,10 +37,11 @@ interface TweetProps {
   onReport?: () => void;
   onSave?: () => void;
   onDelete?: () => void;
+  onBlock?: () => void;
   isOwnPost?: boolean;
 }
 
-export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDelete, isOwnPost = false }: TweetProps) {
+export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDelete, onBlock, isOwnPost = false }: TweetProps) {
   const colors = useThemeColors();
   const { t } = useLanguage();
   const [showOptionsModal, setShowOptionsModal] = useState(false);
@@ -203,6 +205,8 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
         onClose={() => setShowOptionsModal(false)}
         onDelete={handleDelete}
         onReport={handleReport}
+        onBlock={onBlock}
+        canBlock={!isOwnPost && !tweet.isAnonymous && !!tweet.author.id}
       />
     </>
   );

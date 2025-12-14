@@ -49,6 +49,9 @@ export interface UserDocument {
   fcmToken?: string;             // Firebase Cloud Messaging token for push notifications
   notificationPermissionAsked?: boolean; // Whether we've asked for notification permission
   
+  // Blocking
+  blockedUsers?: string[];       // Array of user IDs that this user has blocked
+  
   // Timestamps
   createdAt: Timestamp;          // Account creation
   updatedAt: Timestamp;          // Last profile update

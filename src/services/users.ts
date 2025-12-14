@@ -7,16 +7,19 @@
 import { db } from '@/config/firebase';
 import { COLLECTIONS, UserDocument } from '@/types/firestore';
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    serverTimestamp,
-    setDoc,
-    Timestamp,
-    updateDoc,
-    where,
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
+  writeBatch
 } from 'firebase/firestore';
 
 // ============================================================================
@@ -233,4 +236,231 @@ export async function updateWarningShowed(
     warningShowed: warningId,
     updatedAt: serverTimestamp(),
   });
+}
+
+/**
+ * Block a user
+ * Adds the blocked user's ID to the current user's blockedUsers array
+ */
+export async function blockUser(currentUserId: string, blockedUserId: string): Promise<void> {
+  if (currentUserId === blockedUserId) {
+    throw new Error('Cannot block yourself');
+  }
+
+  const userRef = doc(db, COLLECTIONS.USERS, currentUserId);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) {
+    throw new Error('User not found');
+  }
+
+  const userData = userSnap.data() as UserDocument;
+  const blockedUsers = userData.blockedUsers || [];
+
+  // Check if already blocked
+  if (blockedUsers.includes(blockedUserId)) {
+    return; // Already blocked, no-op
+  }
+
+  await updateDoc(userRef, {
+    blockedUsers: arrayUnion(blockedUserId),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Unblock a user
+ * Removes the blocked user's ID from the current user's blockedUsers array
+ */
+export async function unblockUser(currentUserId: string, blockedUserId: string): Promise<void> {
+  const userRef = doc(db, COLLECTIONS.USERS, currentUserId);
+  
+  await updateDoc(userRef, {
+    blockedUsers: arrayRemove(blockedUserId),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Unblock all users
+ * Clears the blockedUsers array
+ */
+export async function unblockAllUsers(userId: string): Promise<void> {
+  const userRef = doc(db, COLLECTIONS.USERS, userId);
+  
+  await updateDoc(userRef, {
+    blockedUsers: [],
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Get blocked users count
+ */
+export async function getBlockedUsersCount(userId: string): Promise<number> {
+  const userRef = doc(db, COLLECTIONS.USERS, userId);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) {
+    return 0;
+  }
+
+  const userData = userSnap.data() as UserDocument;
+  return userData.blockedUsers?.length || 0;
+}
+
+/**
+ * Check if a user is blocked by another user
+ */
+export async function isUserBlocked(currentUserId: string, otherUserId: string): Promise<boolean> {
+  const userRef = doc(db, COLLECTIONS.USERS, currentUserId);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) {
+    return false;
+  }
+
+  const userData = userSnap.data() as UserDocument;
+  const blockedUsers = userData.blockedUsers || [];
+  return blockedUsers.includes(otherUserId);
+}
+
+/**
+ * Delete user account and all associated data
+ * 
+ * This function performs a comprehensive cleanup:
+ * - Soft deletes user's posts (sets isDeleted flag)
+ * - Soft deletes user's comments (sets isDeleted flag)
+ * - Deletes user's likes
+ * - Deletes user's saved posts
+ * - Deletes follow relationships (both following and followers)
+ * - Deletes user's notifications
+ * - Deletes user document
+ * 
+ * Note: For production, consider moving this to a Cloud Function
+ * for better performance and to handle large datasets.
+ */
+export async function deleteUserAccount(userId: string): Promise<void> {
+  const batch = writeBatch(db);
+  const batchLimit = 500; // Firestore batch write limit
+  
+  try {
+    // 1. Soft delete user's posts
+    const postsRef = collection(db, COLLECTIONS.POSTS);
+    const userPostsQuery = query(postsRef, where('authorId', '==', userId));
+    const postsSnapshot = await getDocs(userPostsQuery);
+    
+    let batchCount = 0;
+    for (const postDoc of postsSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.update(postDoc.ref, {
+        isDeleted: true,
+        updatedAt: serverTimestamp(),
+      });
+      batchCount++;
+    }
+    
+    // 2. Soft delete user's comments
+    const commentsRef = collection(db, COLLECTIONS.COMMENTS);
+    const userCommentsQuery = query(commentsRef, where('authorId', '==', userId));
+    const commentsSnapshot = await getDocs(userCommentsQuery);
+    
+    for (const commentDoc of commentsSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.update(commentDoc.ref, {
+        isDeleted: true,
+        updatedAt: serverTimestamp(),
+      });
+      batchCount++;
+    }
+    
+    // 3. Delete user's likes
+    const likesRef = collection(db, COLLECTIONS.POST_LIKES);
+    const userLikesQuery = query(likesRef, where('userId', '==', userId));
+    const likesSnapshot = await getDocs(userLikesQuery);
+    
+    for (const likeDoc of likesSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.delete(likeDoc.ref);
+      batchCount++;
+    }
+    
+    // 4. Delete user's saved posts
+    const savesRef = collection(db, COLLECTIONS.SAVED_POSTS);
+    const userSavesQuery = query(savesRef, where('userId', '==', userId));
+    const savesSnapshot = await getDocs(userSavesQuery);
+    
+    for (const saveDoc of savesSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.delete(saveDoc.ref);
+      batchCount++;
+    }
+    
+    // 5. Delete follow relationships (where user is follower)
+    const followsRef = collection(db, COLLECTIONS.FOLLOWS);
+    const followingQuery = query(followsRef, where('followerId', '==', userId));
+    const followingSnapshot = await getDocs(followingQuery);
+    
+    for (const followDoc of followingSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.delete(followDoc.ref);
+      batchCount++;
+    }
+    
+    // 6. Delete follow relationships (where user is being followed)
+    const followersQuery = query(followsRef, where('followingId', '==', userId));
+    const followersSnapshot = await getDocs(followersQuery);
+    
+    for (const followDoc of followersSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.delete(followDoc.ref);
+      batchCount++;
+    }
+    
+    // 7. Delete user's notifications
+    const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
+    const userNotificationsQuery = query(notificationsRef, where('userId', '==', userId));
+    const notificationsSnapshot = await getDocs(userNotificationsQuery);
+    
+    for (const notificationDoc of notificationsSnapshot.docs) {
+      if (batchCount >= batchLimit) {
+        await batch.commit();
+        batchCount = 0;
+      }
+      batch.delete(notificationDoc.ref);
+      batchCount++;
+    }
+    
+    // 8. Delete user document
+    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    batch.delete(userRef);
+    
+    // Commit remaining operations
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+    
+    console.log(`[deleteUserAccount] Successfully deleted account and data for user: ${userId}`);
+  } catch (error) {
+    console.error('[deleteUserAccount] Error deleting user account:', error);
+    throw error;
+  }
 }

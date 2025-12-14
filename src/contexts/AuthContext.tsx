@@ -2,7 +2,7 @@ import { auth } from '@/config/firebase';
 import { createUserProfile, getUserProfile, updateUserProfile } from '@/services/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
-import { User, UserCredential, isSignInWithEmailLink, onAuthStateChanged, sendSignInLinkToEmail, signInWithEmailAndPassword, signInWithEmailLink } from 'firebase/auth';
+import { User, UserCredential, deleteUser, isSignInWithEmailLink, onAuthStateChanged, sendSignInLinkToEmail, signInWithEmailAndPassword, signInWithEmailLink } from 'firebase/auth';
 import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
@@ -12,6 +12,7 @@ interface AuthContextType {
   signInWithLink: (email: string, emailLink: string) => Promise<UserCredential>;
   signInWithEmailAndPassword: (email: string, password: string) => Promise<UserCredential>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   checkEmailLink: (url: string) => Promise<boolean>;
 }
 
@@ -417,6 +418,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('No user is currently signed in');
+      }
+
+      // Import deleteUserAccount from users service
+      const { deleteUserAccount } = await import('@/services/users');
+      
+      // Delete user data from Firestore first
+      await deleteUserAccount(currentUser.uid);
+      
+      // Then delete the Firebase Auth account
+      await deleteUser(currentUser);
+      
+      // Clear AsyncStorage
+      await AsyncStorage.removeItem(EMAIL_LINK_KEY);
+      await AsyncStorage.removeItem(USER_ID_KEY);
+      
+      console.log('Account deleted successfully');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -424,6 +452,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithLink,
     signInWithEmailAndPassword: signInWithEmailAndPasswordAuth,
     signOut,
+    deleteAccount,
     checkEmailLink,
   };
 

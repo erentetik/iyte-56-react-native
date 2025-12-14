@@ -11,17 +11,18 @@ import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 interface DocumentViewerProps {
   documentType: 'privacy' | 'terms';
+  webUrl?: string;
 }
 
 /**
@@ -458,7 +459,7 @@ function markdownToHtml(markdown: string, isDark: boolean): string {
   `;
 }
 
-export function DocumentViewerScreen({ documentType }: DocumentViewerProps) {
+export function DocumentViewerScreen({ documentType, webUrl }: DocumentViewerProps) {
   const colors = useThemeColors();
   const { t } = useLanguage();
   const router = useRouter();
@@ -469,6 +470,12 @@ export function DocumentViewerScreen({ documentType }: DocumentViewerProps) {
   useEffect(() => {
     const loadDocument = async () => {
       try {
+        // If webUrl is provided, use webview to load from web project
+        if (webUrl) {
+          setLoading(false);
+          return; // Will render WebView with URL
+        }
+        
         // Try to load from GitHub raw content first
         const fileName = documentType === 'privacy' ? 'PRIVACY_POLICY.md' : 'TERMS_OF_USE.md';
         const githubUrl = `https://raw.githubusercontent.com/erentetk/iyte-56/main/${fileName}`;
@@ -498,7 +505,7 @@ export function DocumentViewerScreen({ documentType }: DocumentViewerProps) {
     };
 
     loadDocument();
-  }, [documentType, isDark]);
+  }, [documentType, isDark, webUrl]);
 
   const title = documentType === 'privacy' 
     ? t('settings.privacyPolicy') 
@@ -531,6 +538,19 @@ export function DocumentViewerScreen({ documentType }: DocumentViewerProps) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.orange[9]} />
         </View>
+      ) : webUrl ? (
+        <WebView
+          source={{ uri: webUrl }}
+          style={[styles.webview, { backgroundColor: colors.background }]}
+          showsVerticalScrollIndicator={true}
+          scrollEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.orange[9]} />
+            </View>
+          )}
+        />
       ) : (
         <WebView
           source={{ html: htmlContent }}

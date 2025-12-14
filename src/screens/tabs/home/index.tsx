@@ -13,7 +13,8 @@ import { useBatchSaveCheck, useToggleSave } from '@/hooks/queries/use-saves';
 import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { ReportPostModal } from '@/screens/modal/report-post';
-import { updateWarningShowed } from '@/services/users';
+import { configureNotificationHandler, hasNotificationPermissionBeenAsked, registerFCMToken } from '@/services/notifications';
+import { blockUser, updateWarningShowed } from '@/services/users';
 import { getPendingWarningId, getWarningText } from '@/services/warnings';
 import { PostDocument, UserDocument } from '@/types/firestore';
 import { applyFont } from '@/utils/apply-fonts';
@@ -70,7 +71,7 @@ function postToTweet(
   return {
     id: post.id,
     author: {
-      // id: post.authorId,
+      id: post.authorId,
       name: post.authorDisplayName,
       username: post.authorUsername,
       avatar: post.authorAvatar,
@@ -110,6 +111,41 @@ export function HomeScreen() {
   
   // Fetch current user's profile for like/save/report operations
   const { data: userProfile } = useUser(user?.uid);
+  
+  // Configure Firebase Messaging notification handlers on mount
+  React.useEffect(() => {
+    configureNotificationHandler();
+  }, []);
+  
+  // Request notification permissions and register FCM token
+  React.useEffect(() => {
+    const requestNotificationPermission = async () => {
+      if (!user?.uid || !userProfile) {
+        return;
+      }
+      
+      try {
+        // Check if we've already asked for permission
+        const hasAsked = await hasNotificationPermissionBeenAsked(user.uid);
+        
+        if (!hasAsked) {
+          // Register FCM token (this will request permission if not granted)
+          await registerFCMToken(user.uid);
+          
+          // Invalidate user query to refetch updated profile
+          queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(user.uid) });
+        } else if (!userProfile.fcmToken) {
+          // If permission was asked but token is missing, try to register again
+          await registerFCMToken(user.uid);
+          queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(user.uid) });
+        }
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    };
+    
+    requestNotificationPermission();
+  }, [user?.uid, userProfile, queryClient]);
   
   // Check for warnings if not already set (fallback check in home screen)
   React.useEffect(() => {
@@ -185,10 +221,13 @@ export function HomeScreen() {
   // const { data: followingIds } = useFollowingIds(user?.uid);
   
   // Fetch featured feed (sorted by popularity)
-  const featuredFeed = useFeaturedFeed();
+  // Get blocked users list from user profile
+  const blockedUsers = userProfile?.blockedUsers || [];
+  
+  const featuredFeed = useFeaturedFeed(blockedUsers);
   
   // Fetch latest feed (sorted by createdAt)
-  const latestFeed = useLatestFeed();
+  const latestFeed = useLatestFeed(blockedUsers);
   
   // Fetch following feed
   // const followingFeed = useFollowingFeed(user?.uid || '', followingIds || []);
@@ -345,6 +384,36 @@ export function HomeScreen() {
     setSelectedPostAuthor(author);
     setReportModalVisible(true);
   }, [userProfile]);
+
+  // Handle block user action
+  const handleBlock = useCallback(async (post: PostDocument) => {
+    if (!userProfile || !user?.uid || post.authorId === user.uid || post.isAnonymous) return;
+    
+    Alert.alert(
+      t('postOptions.blockUserConfirm'),
+      t('postOptions.blockUserMessage').replace('{{username}}', post.authorUsername),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('postOptions.blockUser'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await blockUser(user.uid, post.authorId);
+              Alert.alert(t('common.success'), t('postOptions.blockUserSuccess'));
+              // Invalidate user query to refresh blocked users list
+              queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(user.uid) });
+              // Invalidate feeds to remove blocked user's posts
+              queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
+            } catch (error: any) {
+              console.error('Error blocking user:', error);
+              Alert.alert(t('common.error'), error?.message || t('postOptions.blockUserError'));
+            }
+          },
+        },
+      ]
+    );
+  }, [userProfile, user?.uid, t, queryClient]);
   
   // Handle follow/unfollow action
   // const handleFollow = useCallback(
@@ -426,13 +495,14 @@ export function HomeScreen() {
           onSave={() => handleSave(item)}
           onReport={() => handleReport(item)}
           onDelete={() => handleDelete(item)}
+          onBlock={() => handleBlock(item)}
           isOwnPost={isOwnPost}
           // onFollow={() => handleFollow(item)}
           // currentUserId={user?.uid}
         />
       );
     },
-    [likedPostIds, savedPostIds, reportedPostIds, user?.uid, handlePostPress, handleLike, handleReply, handleSave, handleReport, handleDelete, t /*, followingIdsSet, handleFollow */]
+    [likedPostIds, savedPostIds, reportedPostIds, user?.uid, handlePostPress, handleLike, handleReply, handleSave, handleReport, handleDelete, handleBlock, t /*, followingIdsSet, handleFollow */]
   );
   
   // Render footer (loading indicator for pagination)

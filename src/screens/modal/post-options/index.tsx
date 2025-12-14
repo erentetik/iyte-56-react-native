@@ -23,6 +23,8 @@ interface PostOptionsModalProps {
   onClose: () => void;
   onDelete?: () => void;
   onReport?: () => void;
+  onBlock?: () => void;
+  canBlock?: boolean;
 }
 
 export function PostOptionsModal({
@@ -31,6 +33,8 @@ export function PostOptionsModal({
   onClose,
   onDelete,
   onReport,
+  onBlock,
+  canBlock = false,
 }: PostOptionsModalProps) {
   const colors = useThemeColors();
   const { t } = useLanguage();
@@ -43,6 +47,11 @@ export function PostOptionsModal({
   const handleReport = () => {
     onClose();
     onReport?.();
+  };
+
+  const handleBlock = () => {
+    onClose();
+    onBlock?.();
   };
 
   return (
@@ -74,15 +83,28 @@ export function PostOptionsModal({
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={[styles.option, { borderBottomColor: colors.neutral[6] }]}
-                onPress={handleReport}
-              >
-                <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.orange[9]} />
-                <Text style={[styles.optionText, { color: colors.neutral[12] }]}>
-                  {t('postOptions.report')}
-                </Text>
-              </TouchableOpacity>
+              <>
+                {canBlock && (
+                  <TouchableOpacity
+                    style={[styles.option, { borderBottomColor: colors.neutral[6] }]}
+                    onPress={handleBlock}
+                  >
+                    <IconSymbol name="person.fill.xmark" size={20} color={colors.orange[9]} />
+                    <Text style={[styles.optionText, { color: colors.neutral[12] }]}>
+                      {t('postOptions.blockUser')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.option, { borderBottomColor: colors.neutral[6] }]}
+                  onPress={handleReport}
+                >
+                  <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.orange[9]} />
+                  <Text style={[styles.optionText, { color: colors.neutral[12] }]}>
+                    {t('postOptions.report')}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
             <TouchableOpacity
               style={styles.option}

@@ -7,22 +7,22 @@
 import { db } from '@/config/firebase';
 import { COLLECTIONS, PostDocument, UserDocument } from '@/types/firestore';
 import {
-  addDoc,
-  collection,
-  doc,
-  DocumentData,
-  getDoc,
-  getDocs,
-  increment,
-  limit,
-  orderBy,
-  query,
-  QueryDocumentSnapshot,
-  serverTimestamp,
-  startAfter,
-  Timestamp,
-  updateDoc,
-  where,
+    addDoc,
+    collection,
+    doc,
+    DocumentData,
+    getDoc,
+    getDocs,
+    increment,
+    limit,
+    orderBy,
+    query,
+    QueryDocumentSnapshot,
+    serverTimestamp,
+    startAfter,
+    Timestamp,
+    updateDoc,
+    where,
 } from 'firebase/firestore';
 
 const POSTS_PER_PAGE = 10;
@@ -33,9 +33,11 @@ const POSTS_PER_PAGE = 10;
 
 /**
  * Get latest public feed posts with pagination (sorted by createdAt)
+ * Filters out posts from blocked users
  */
 export async function getLatestFeed(
-  lastDoc?: QueryDocumentSnapshot<DocumentData>
+  lastDoc?: QueryDocumentSnapshot<DocumentData>,
+  blockedUsers: string[] = []
 ): Promise<{ posts: PostDocument[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
   const postsRef = collection(db, COLLECTIONS.POSTS);
   
@@ -45,7 +47,7 @@ export async function getLatestFeed(
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
     orderBy('createdAt', 'desc'),
-    limit(POSTS_PER_PAGE)
+    limit(POSTS_PER_PAGE * 2) // Fetch more to account for filtering
   );
   
   if (lastDoc) {
@@ -53,23 +55,36 @@ export async function getLatestFeed(
   }
   
   const snapshot = await getDocs(q);
-  const posts = snapshot.docs.map(doc => ({
+  let posts = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   })) as PostDocument[];
   
-  const newLastDoc = snapshot.docs.length > 0 
-    ? snapshot.docs[snapshot.docs.length - 1] 
+  // Filter out posts from blocked users
+  if (blockedUsers.length > 0) {
+    const blockedSet = new Set(blockedUsers);
+    posts = posts.filter(post => !blockedSet.has(post.authorId));
+  }
+  
+  // Limit to POSTS_PER_PAGE after filtering
+  const limitedPosts = posts.slice(0, POSTS_PER_PAGE);
+  
+  // Find the lastDoc from the original snapshot that corresponds to the last post in filtered results
+  const lastPostId = limitedPosts.length > 0 ? limitedPosts[limitedPosts.length - 1].id : null;
+  const newLastDoc = lastPostId 
+    ? snapshot.docs.find(doc => doc.id === lastPostId) || null
     : null;
   
-  return { posts, lastDoc: newLastDoc };
+  return { posts: limitedPosts, lastDoc: newLastDoc };
 }
 
 /**
  * Get featured/popular posts with pagination (sorted by popularityScore)
+ * Filters out posts from blocked users
  */
 export async function getFeaturedFeed(
-  lastDoc?: QueryDocumentSnapshot<DocumentData>
+  lastDoc?: QueryDocumentSnapshot<DocumentData>,
+  blockedUsers: string[] = []
 ): Promise<{ posts: PostDocument[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
   const postsRef = collection(db, COLLECTIONS.POSTS);
   
@@ -80,7 +95,7 @@ export async function getFeaturedFeed(
     where('isHidden', '==', false),
     orderBy('popularityScore', 'desc'),
     orderBy('createdAt', 'desc'),
-    limit(POSTS_PER_PAGE)
+    limit(POSTS_PER_PAGE * 2) // Fetch more to account for filtering
   );
   
   if (lastDoc) {
@@ -88,42 +103,64 @@ export async function getFeaturedFeed(
   }
   
   const snapshot = await getDocs(q);
-  const posts = snapshot.docs.map(doc => ({
+  let posts = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   })) as PostDocument[];
   
-  const newLastDoc = snapshot.docs.length > 0 
-    ? snapshot.docs[snapshot.docs.length - 1] 
+  // Filter out posts from blocked users
+  if (blockedUsers.length > 0) {
+    const blockedSet = new Set(blockedUsers);
+    posts = posts.filter(post => !blockedSet.has(post.authorId));
+  }
+  
+  // Limit to POSTS_PER_PAGE after filtering
+  const limitedPosts = posts.slice(0, POSTS_PER_PAGE);
+  
+  // Find the lastDoc from the original snapshot that corresponds to the last post in filtered results
+  const lastPostId = limitedPosts.length > 0 ? limitedPosts[limitedPosts.length - 1].id : null;
+  const newLastDoc = lastPostId 
+    ? snapshot.docs.find(doc => doc.id === lastPostId) || null
     : null;
   
-  return { posts, lastDoc: newLastDoc };
+  return { posts: limitedPosts, lastDoc: newLastDoc };
 }
 
 /**
  * Get public feed posts with pagination (alias for getLatestFeed for backwards compatibility)
  */
 export async function getPublicFeed(
-  lastDoc?: QueryDocumentSnapshot<DocumentData>
+  lastDoc?: QueryDocumentSnapshot<DocumentData>,
+  blockedUsers: string[] = []
 ): Promise<{ posts: PostDocument[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
-  return getLatestFeed(lastDoc);
+  return getLatestFeed(lastDoc, blockedUsers);
 }
 
 /**
  * Get posts from users that the current user follows
+ * Filters out posts from blocked users
  */
 export async function getFollowingFeed(
   userId: string,
   followingIds: string[],
-  lastDoc?: QueryDocumentSnapshot<DocumentData>
+  lastDoc?: QueryDocumentSnapshot<DocumentData>,
+  blockedUsers: string[] = []
 ): Promise<{ posts: PostDocument[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
   if (followingIds.length === 0) {
     return { posts: [], lastDoc: null };
   }
   
+  // Filter out blocked users from following list
+  const blockedSet = new Set(blockedUsers);
+  const filteredFollowingIds = followingIds.filter(id => !blockedSet.has(id));
+  
+  if (filteredFollowingIds.length === 0) {
+    return { posts: [], lastDoc: null };
+  }
+  
   // Firestore 'in' queries are limited to 10 items
   // For larger following lists, you'd need to batch queries or use a different approach
-  const limitedFollowingIds = followingIds.slice(0, 10);
+  const limitedFollowingIds = filteredFollowingIds.slice(0, 10);
   
   const postsRef = collection(db, COLLECTIONS.POSTS);
   

@@ -31,6 +31,10 @@ module.exports = {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
+      // Required for FCM push notifications on iOS
+      // The file should be in ios/ directory (or project root for Expo to copy it)
+      // Expo will copy it to the correct location during prebuild
+      googleServicesFile: './ios/GoogleService-Info.plist',
     },
     android: {
       adaptiveIcon: {
@@ -42,6 +46,9 @@ module.exports = {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: 'com.erentetik.iyte56',
+      // For FCM to work, add google-services.json to project root
+      // Then reference it here (Expo will copy it to android/app/ during build)
+      // googleServicesFile: './google-services.json',
     },
     web: {
       output: 'static',
@@ -50,6 +57,15 @@ module.exports = {
     plugins: [
       'expo-router',
       'expo-localization',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/app_logo.png',
+          color: '#ffffff',
+          sounds: [],
+          mode: 'production',
+        },
+      ],
     ],
     splash: {
       resizeMode: 'native',

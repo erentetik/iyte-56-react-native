@@ -5,7 +5,8 @@
  */
 
 import { db } from '@/config/firebase';
-import { COLLECTIONS, CommentDocument, UserDocument } from '@/types/firestore';
+import { createNotification } from '@/services/notifications';
+import { COLLECTIONS, CommentDocument, PostDocument, UserDocument } from '@/types/firestore';
 import {
   addDoc,
   collection,
@@ -316,7 +317,7 @@ export async function createComment(
     console.error('Error updating post comment count:', err);
   }
   
-  // If replying to a comment, update parent's reply count
+  // If replying to a comment, update parent's reply count and notify parent comment author
   if (input.parentCommentId) {
     try {
       const parentRef = doc(db, COLLECTIONS.COMMENTS, input.parentCommentId);
@@ -324,8 +325,74 @@ export async function createComment(
         repliesCount: increment(1),
       });
       
+      // Get parent comment to notify its author
+      const parentComment = await getCommentById(input.parentCommentId);
+      if (parentComment && parentComment.authorId !== author.id) {
+        try {
+          // Get post to get post content preview
+          const postRef = doc(db, COLLECTIONS.POSTS, postId);
+          const postSnap = await getDoc(postRef);
+          const postData = postSnap.exists() ? (postSnap.data() as PostDocument) : null;
+          
+          const replyNotificationData: any = {
+            userId: parentComment.authorId,
+            type: 'reply',
+            actorId: author.id,
+            actorUsername: author.username || 'user',
+            actorDisplayName: author.displayName || 'User',
+            postId: postId,
+            commentId: docRef.id,
+            postContent: postData?.content?.substring(0, 100) || '',
+          };
+          
+          // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
+          if (author.avatar) {
+            replyNotificationData.actorAvatar = author.avatar;
+          }
+          
+          await createNotification(replyNotificationData);
+          console.log('[Comment] Reply notification created for parent comment author');
+        } catch (error) {
+          console.error('Error creating reply notification:', error);
+        }
+      }
     } catch (err) {
       console.error('Error updating parent reply count:', err);
+    }
+  } else {
+    // Top-level comment - notify post author (if different from comment author)
+    try {
+      const postRef = doc(db, COLLECTIONS.POSTS, postId);
+      const postSnap = await getDoc(postRef);
+      
+      if (postSnap.exists()) {
+        const postData = postSnap.data() as PostDocument;
+        
+        // Only notify if comment author is different from post author
+        if (postData.authorId !== author.id) {
+          const commentNotificationData: any = {
+            userId: postData.authorId,
+            type: 'comment',
+            actorId: author.id,
+            actorUsername: author.username || 'user',
+            actorDisplayName: author.displayName || 'User',
+            postId: postId,
+            commentId: docRef.id,
+            postContent: postData.content?.substring(0, 100) || '',
+          };
+          
+          // Only include actorAvatar if it exists (Firestore doesn't allow undefined)
+          if (author.avatar) {
+            commentNotificationData.actorAvatar = author.avatar;
+          }
+          
+          await createNotification(commentNotificationData);
+          console.log('[Comment] Notification created for post author');
+        }
+      }
+    } catch (error) {
+      console.error('Error creating comment notification:', error);
+      // Don't fail the comment creation if notification fails
     }
   }
   

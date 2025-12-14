@@ -28,11 +28,11 @@ import { queryKeys } from './query-client';
 /**
  * Hook for public feed with infinite scrolling
  */
-export function usePublicFeed() {
+export function usePublicFeed(blockedUsers: string[] = []) {
   return useInfiniteQuery({
-    queryKey: queryKeys.posts.publicFeed(),
+    queryKey: [...queryKeys.posts.publicFeed(), blockedUsers.sort().join(',')],
     queryFn: async ({ pageParam }) => {
-      return getPublicFeed(pageParam);
+      return getPublicFeed(pageParam, blockedUsers);
     },
     initialPageParam: undefined as any,
     getNextPageParam: (lastPage) => lastPage.lastDoc ?? undefined,
@@ -43,11 +43,11 @@ export function usePublicFeed() {
 /**
  * Hook for featured feed with infinite scrolling (sorted by popularity/likes)
  */
-export function useFeaturedFeed() {
+export function useFeaturedFeed(blockedUsers: string[] = []) {
   return useInfiniteQuery({
-    queryKey: queryKeys.posts.featuredFeed(),
+    queryKey: [...queryKeys.posts.featuredFeed(), blockedUsers.sort().join(',')],
     queryFn: async ({ pageParam }) => {
-      return getFeaturedFeed(pageParam);
+      return getFeaturedFeed(pageParam, blockedUsers);
     },
     initialPageParam: undefined as any,
     getNextPageParam: (lastPage) => lastPage.lastDoc ?? undefined,
@@ -58,11 +58,11 @@ export function useFeaturedFeed() {
 /**
  * Hook for latest feed with infinite scrolling (sorted by createdAt)
  */
-export function useLatestFeed() {
+export function useLatestFeed(blockedUsers: string[] = []) {
   return useInfiniteQuery({
-    queryKey: queryKeys.posts.latestFeed(),
+    queryKey: [...queryKeys.posts.latestFeed(), blockedUsers.sort().join(',')],
     queryFn: async ({ pageParam }) => {
-      return getLatestFeed(pageParam);
+      return getLatestFeed(pageParam, blockedUsers);
     },
     initialPageParam: undefined as any,
     getNextPageParam: (lastPage) => lastPage.lastDoc ?? undefined,
@@ -73,11 +73,11 @@ export function useLatestFeed() {
 /**
  * Hook for following feed with infinite scrolling
  */
-export function useFollowingFeed(userId: string, followingIds: string[]) {
+export function useFollowingFeed(userId: string, followingIds: string[], blockedUsers: string[] = []) {
   return useInfiniteQuery({
-    queryKey: queryKeys.posts.followingFeed(userId),
+    queryKey: [...queryKeys.posts.followingFeed(userId), blockedUsers.sort().join(',')],
     queryFn: async ({ pageParam }) => {
-      return getFollowingFeed(userId, followingIds, pageParam);
+      return getFollowingFeed(userId, followingIds, pageParam, blockedUsers);
     },
     initialPageParam: undefined as any,
     getNextPageParam: (lastPage) => lastPage.lastDoc ?? undefined,
