@@ -5,6 +5,7 @@
  */
 
 import { db } from '@/config/firebase';
+import { logAdClick, logAdImpression, logEvent } from '@/services/analytics';
 import { AdDocument, AdImpressionDocument, COLLECTIONS } from '@/types/firestore';
 import {
     collection,
@@ -78,13 +79,17 @@ export async function getPinnedAd(): Promise<AdDocument | null> {
 /**
  * Track ad impression
  */
-export async function trackAdImpression(adId: string, userId: string): Promise<void> {
+export async function trackAdImpression(adId: string, userId: string, advertiserId?: string): Promise<void> {
   if (!userId) return;
   
   const adRef = doc(db, COLLECTIONS.ADS, adId);
   const impressionRef = doc(db, COLLECTIONS.AD_IMPRESSIONS, `${adId}_${userId}`);
   
   try {
+    // Check if this is a unique view (first time user sees this ad)
+    const impressionDoc = await getDoc(impressionRef);
+    const isUniqueView = !impressionDoc.exists();
+    
     // Update ad's total impressions
     await updateDoc(adRef, {
       impressions: increment(1),
@@ -92,7 +97,6 @@ export async function trackAdImpression(adId: string, userId: string): Promise<v
     });
     
     // Update or create user impression record
-    const impressionDoc = await getDoc(impressionRef);
     if (impressionDoc.exists()) {
       await updateDoc(impressionRef, {
         impressions: increment(1),
@@ -100,7 +104,7 @@ export async function trackAdImpression(adId: string, userId: string): Promise<v
         updatedAt: serverTimestamp(),
       });
     } else {
-      // Create new impression record
+      // Create new impression record (unique view)
       await setDoc(impressionRef, {
         adId,
         userId,
@@ -109,6 +113,22 @@ export async function trackAdImpression(adId: string, userId: string): Promise<v
         lastShownAt: serverTimestamp(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+    }
+    
+    // Send to Firebase Analytics
+    // Track total view (always)
+    await logAdImpression(adId, advertiserId).catch((error) => {
+      console.error('Error logging ad impression to Analytics:', error);
+    });
+    
+    // Track unique view (first time only)
+    if (isUniqueView) {
+      await logEvent('ad_unique_view', {
+        ad_id: adId,
+        ...(advertiserId && { advertiser_id: advertiserId }),
+      }).catch((error) => {
+        console.error('Error logging unique ad view to Analytics:', error);
       });
     }
   } catch (error) {
@@ -120,7 +140,7 @@ export async function trackAdImpression(adId: string, userId: string): Promise<v
 /**
  * Track ad click
  */
-export async function trackAdClick(adId: string, userId: string): Promise<void> {
+export async function trackAdClick(adId: string, userId: string, advertiserId?: string): Promise<void> {
   if (!userId) return;
   
   const adRef = doc(db, COLLECTIONS.ADS, adId);
@@ -140,6 +160,11 @@ export async function trackAdClick(adId: string, userId: string): Promise<void> 
         updatedAt: serverTimestamp(),
       });
     }
+    
+    // Send to Firebase Analytics
+    await logAdClick(adId, advertiserId).catch((error) => {
+      console.error('Error logging ad click to Analytics:', error);
+    });
   } catch (error) {
     console.error('Error tracking ad click:', error);
     // Don't throw - click tracking shouldn't break the app

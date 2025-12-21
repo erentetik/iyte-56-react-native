@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/text';
+import { identifyAdaptyUser, initializeAdapty } from '@/config/adapty';
 import { fonts } from '@/config/fonts';
-import { initializeAdapty, identifyAdaptyUser } from '@/config/adapty';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
@@ -8,6 +8,7 @@ import { WarningProvider, useWarning } from '@/contexts/WarningContext';
 import { queryClient } from '@/hooks/queries/query-client';
 import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { initializeAnalytics, logAppOpen, setUserId } from '@/services/analytics';
 import { getPendingWarningId, getWarningText } from '@/services/warnings';
 import { applyFont } from '@/utils/apply-fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,11 +52,19 @@ function RootLayoutNav() {
   const { data: userProfile } = useUser(user?.uid);
   const { setPendingWarning } = useWarning();
   
-  // Identify user with Adapty when authenticated
+  // Identify user with Adapty and Analytics when authenticated
   useEffect(() => {
     if (user?.uid) {
       identifyAdaptyUser(user.uid).catch((error) => {
         console.error('Failed to identify Adapty user:', error);
+      });
+      setUserId(user.uid).catch((error) => {
+        console.error('Failed to set Analytics user ID:', error);
+      });
+    } else {
+      // Reset analytics when user logs out
+      setUserId(null).catch((error) => {
+        console.error('Failed to reset Analytics user ID:', error);
       });
     }
   }, [user?.uid]);
@@ -216,11 +225,19 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fonts);
 
-  // Initialize Adapty on app start
+  // Initialize Adapty and Analytics on app start
   useEffect(() => {
     initializeAdapty().catch((error) => {
       console.error('Failed to initialize Adapty:', error);
     });
+    
+    initializeAnalytics()
+      .then(() => {
+        logAppOpen();
+      })
+      .catch((error) => {
+        console.error('Failed to initialize Analytics:', error);
+      });
   }, []);
 
   useEffect(() => {

@@ -45,7 +45,9 @@ export function AdCard({ ad, userId }: AdCardProps) {
       impressionTrackedRef.current = trackingKey;
       
       timeoutId = setTimeout(() => {
-        trackAdImpression(ad.id, userId).catch((error) => {
+        // Pass advertiserId if available (from ad.advertiserId or ad.advertiserUserId)
+        const advertiserId = (ad as any).advertiserId || (ad as any).advertiserUserId;
+        trackAdImpression(ad.id, userId, advertiserId).catch((error) => {
           console.error('Error tracking ad impression:', error);
         });
       }, 500);
@@ -64,7 +66,8 @@ export function AdCard({ ad, userId }: AdCardProps) {
     
     try {
       // Track click in background (don't await)
-      trackAdClick(ad.id, userId).catch((error) => {
+      const advertiserId = (ad as any).advertiserId || (ad as any).advertiserUserId;
+      trackAdClick(ad.id, userId, advertiserId).catch((error) => {
         console.error('Error tracking ad click:', error);
       });
       
