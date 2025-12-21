@@ -1,11 +1,10 @@
 /**
  * Setup Screen
  * 
- * First-time setup for new users to set their display name and username.
+ * First-time setup for new users to set their username.
  */
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { queryClient, queryKeys } from '@/hooks/queries/query-client';
@@ -16,14 +15,14 @@ import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,7 +33,6 @@ export function SetupScreen() {
   const router = useRouter();
   const { refetch } = useUser(user?.uid);
   
-  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
@@ -76,11 +74,6 @@ export function SetupScreen() {
     }
 
     // Validate inputs
-    if (!displayName.trim()) {
-      Alert.alert(t('auth.setup.error'), t('auth.setup.displayNameRequired'));
-      return;
-    }
-
     if (!username.trim()) {
       Alert.alert(t('auth.setup.error'), t('auth.setup.usernameRequired'));
       return;
@@ -95,7 +88,6 @@ export function SetupScreen() {
       
       // Update user profile
       await updateUser(user.uid, {
-        displayName: displayName.trim(),
         username: username.trim(),
       });
 
@@ -140,21 +132,6 @@ export function SetupScreen() {
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.neutral[12] }]}>
-                {t('auth.setup.displayName')}
-              </Text>
-              <Input
-                placeholder={t('auth.setup.displayNamePlaceholder')}
-                value={displayName}
-                onChangeText={setDisplayName}
-                autoCapitalize="words"
-                autoCorrect={false}
-                maxLength={50}
-                editable={!loading}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: colors.neutral[12] }]}>
                 {t('auth.setup.username')}
               </Text>
               <View style={[styles.usernameContainer, { borderColor: colors.neutral[6], backgroundColor: colors.neutral[3] }]}>
@@ -186,7 +163,7 @@ export function SetupScreen() {
               variant="default"
               size="lg"
               onPress={handleSubmit}
-              disabled={loading || !displayName.trim() || !username.trim() || !!usernameError}
+              disabled={loading || !username.trim() || !!usernameError}
               style={styles.button}
             >
               {loading ? (

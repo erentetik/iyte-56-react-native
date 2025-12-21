@@ -72,6 +72,10 @@ function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isR
     author: {
       name: post.authorUsername,
       username: post.authorUsername,
+      avatar: post.authorAvatar,
+      isAdmin: post.authorIsAdmin,
+      borderColor: post.authorBorderColor,
+      borderColors: post.authorBorderColors,
     },
     content: post.content,
     timestamp: formatTimestamp(post.createdAt, t),
@@ -81,7 +85,8 @@ function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isR
     isSaved,
     isReported,
     isAnonymous: post.isAnonymous,
-    imageUrl: post.mediaUrls?.[0],
+    imageUrl: post.mediaUrls?.[0], // Keep for backward compatibility
+    imageUrls: post.mediaUrls?.filter(url => url) || undefined, // Array of all images
   };
 }
 
@@ -553,7 +558,7 @@ export function ProfileScreen() {
       <FlatList
         data={currentTabData}
         renderItem={renderItem}
-        keyExtractor={(item) => `${activeTab}-${item.id}`}
+        keyExtractor={(item: PostDocument) => `${activeTab}-${item.id}`}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListHeaderComponent={renderHeader}

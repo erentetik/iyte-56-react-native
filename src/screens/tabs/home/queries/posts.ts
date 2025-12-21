@@ -46,7 +46,6 @@ export async function getLatestFeed(
     where('visibility', '==', 'public'),
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
-    where('moderationChecked', '==', true), // Only show checked content
     orderBy('createdAt', 'desc'),
     limit(POSTS_PER_PAGE * 2) // Fetch more to account for filtering
   );
@@ -94,7 +93,6 @@ export async function getFeaturedFeed(
     where('visibility', '==', 'public'),
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
-    where('moderationChecked', '==', true), // Only show checked content
     orderBy('popularityScore', 'desc'),
     orderBy('createdAt', 'desc'),
     limit(POSTS_PER_PAGE * 2) // Fetch more to account for filtering
@@ -171,7 +169,6 @@ export async function getFollowingFeed(
     where('authorId', 'in', limitedFollowingIds),
     where('isDeleted', '==', false),
     where('isHidden', '==', false),
-    where('moderationChecked', '==', true), // Only show checked content
     orderBy('createdAt', 'desc'),
     limit(POSTS_PER_PAGE)
   );
@@ -326,6 +323,8 @@ export async function createPost(
   const authorAvatar = author.avatar || '';
   const authorIsVerified = author.isVerified === true;
   const authorIsAdmin = author.isAdmin === true;
+  const authorBorderColor = author.borderColor;
+  const authorBorderColors = author.borderColors;
   
   console.log('Post author info:', { authorId, authorUsername, authorDisplayName, authorAvatar, authorIsVerified, authorIsAdmin });
   
@@ -339,6 +338,8 @@ export async function createPost(
     authorAvatar,
     authorIsVerified,
     authorIsAdmin,
+    ...(authorBorderColor ? { authorBorderColor } : {}),
+    ...(authorBorderColors ? { authorBorderColors } : {}),
     
     // Media - only include mediaType if there are media URLs
     mediaUrls: input.mediaUrls || [],

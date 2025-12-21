@@ -261,7 +261,7 @@ export function useDeleteComment() {
       // Optimistically mark as deleted
       queryClient.setQueryData(queryKeys.comments.detail(commentId), null);
       
-      return { previousComment };
+      return { previousComment, authorId: previousComment?.authorId };
     },
     onError: (err, { commentId }, context) => {
       if (context?.previousComment) {
@@ -271,13 +271,20 @@ export function useDeleteComment() {
         );
       }
     },
-    onSettled: (_, __, { postId, parentCommentId }) => {
+    onSettled: (_, __, { postId, parentCommentId }, context) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.comments.byPost(postId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.detail(postId) });
       
       if (parentCommentId) {
         queryClient.invalidateQueries({ 
           queryKey: queryKeys.comments.detail(parentCommentId) 
+        });
+      }
+      
+      // Invalidate user comments count if we have the authorId
+      if (context?.authorId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [...queryKeys.comments.all, 'userCount', context.authorId] 
         });
       }
     },

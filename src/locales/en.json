@@ -169,7 +169,8 @@
     "submitError": "Failed to create post. Please try again.",
     "discardTitle": "Discard Post?",
     "discardMessage": "Are you sure you want to discard this post?",
-    "discard": "Discard"
+    "discard": "Discard",
+    "boost": "Boost"
   },
   "postDetail": {
     "title": "Post",

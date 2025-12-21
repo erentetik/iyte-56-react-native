@@ -1,5 +1,6 @@
 import { Text } from '@/components/ui/text';
 import { fonts } from '@/config/fonts';
+import { initializeAdapty, identifyAdaptyUser } from '@/config/adapty';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
@@ -49,6 +50,15 @@ function RootLayoutNav() {
   // Fetch user document during splash if user is authenticated
   const { data: userProfile } = useUser(user?.uid);
   const { setPendingWarning } = useWarning();
+  
+  // Identify user with Adapty when authenticated
+  useEffect(() => {
+    if (user?.uid) {
+      identifyAdaptyUser(user.uid).catch((error) => {
+        console.error('Failed to identify Adapty user:', error);
+      });
+    }
+  }, [user?.uid]);
   
   // Check for pending warnings during splash
   useEffect(() => {
@@ -113,7 +123,7 @@ function RootLayoutNav() {
       router.replace('/onboarding');
     } else if (user) {
       // Check if user has completed profile setup
-      const needsSetup = !userProfile?.username || !userProfile?.displayName;
+      const needsSetup = !userProfile?.username;
       if (needsSetup) {
         router.replace('/(auth)/setup');
       } else {
@@ -144,7 +154,7 @@ function RootLayoutNav() {
 
     if (user) {
       // Check if user needs to complete setup
-      const needsSetup = !userProfile?.username || !userProfile?.displayName;
+      const needsSetup = !userProfile?.username;
       if (needsSetup && !inAuthGroup) {
         router.replace('/(auth)/setup');
       } else if (!needsSetup && inAuthGroup && !inSetup) {
@@ -205,6 +215,13 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fonts);
+
+  // Initialize Adapty on app start
+  useEffect(() => {
+    initializeAdapty().catch((error) => {
+      console.error('Failed to initialize Adapty:', error);
+    });
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

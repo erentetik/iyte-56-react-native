@@ -15,7 +15,7 @@ const PENDING_EMAIL_LINK_KEY = 'pendingEmailLink';
 export function VerifyScreen() {
   const colors = useThemeColors();
   const { t } = useLanguage();
-  const { signInWithLink } = useAuth();
+  const { signInWithLink, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
@@ -24,6 +24,24 @@ export function VerifyScreen() {
   useEffect(() => {
     const handleEmailLink = async () => {
       try {
+        // Wait for auth to finish loading
+        if (authLoading) {
+          return;
+        }
+
+        // Check if user is already authenticated (AuthContext might have already signed them in)
+        if (user) {
+          console.log('Verify screen: User already authenticated, showing success');
+          // Clear any pending email link since we're already signed in
+          await AsyncStorage.removeItem(PENDING_EMAIL_LINK_KEY);
+          setStatus('success');
+          // Redirect to tabs after a short delay
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 1500);
+          return;
+        }
+
         // Get the email from storage
         const email = await AsyncStorage.getItem(EMAIL_LINK_KEY);
         
@@ -103,13 +121,40 @@ export function VerifyScreen() {
           router.replace('/(tabs)');
         }, 1500);
       } catch (error: any) {
+        // Check if user became authenticated despite the error (race condition)
+        // This can happen if AuthContext already used the link
+        if (user) {
+          console.log('Verify screen: User authenticated despite error (link already used), showing success');
+          await AsyncStorage.removeItem(PENDING_EMAIL_LINK_KEY);
+          setStatus('success');
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 1500);
+          return;
+        }
+
+        // Check if error is due to link already being used (but user not authenticated)
+        // This is a real error
+        const errorCode = error?.code || '';
+        const errorMessage = error?.message || '';
+        
+        // Firebase error codes for invalid/expired/used links
+        if (errorCode === 'auth/invalid-action-code' || 
+            errorCode === 'auth/expired-action-code' ||
+            errorMessage.includes('invalid') ||
+            errorMessage.includes('expired') ||
+            errorMessage.includes('already been used')) {
+          setStatus('error');
+          setErrorMessage(t('auth.verify.invalidLink'));
+        } else {
         setStatus('error');
         setErrorMessage(error.message || t('auth.verify.signInError'));
+        }
       }
     };
 
     handleEmailLink();
-  }, [params.link, t, router, signInWithLink]);
+  }, [params.link, t, router, signInWithLink, user, authLoading]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>

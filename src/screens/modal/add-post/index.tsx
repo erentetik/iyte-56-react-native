@@ -8,18 +8,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../../components/ui/avatar';
@@ -204,19 +204,48 @@ export function AddPostScreen() {
           </View>
           
           {/* Content Input */}
-          <TextInput
-            style={[
-              styles.contentInput,
-              { color: colors.neutral[12] },
-            ]}
-            placeholder={t('addPost.placeholder')}
-            placeholderTextColor={colors.neutral[8]}
-            multiline
-            maxLength={MAX_CONTENT_LENGTH + 50} // Allow some overflow for visual feedback
-            value={content}
-            onChangeText={setContent}
-            autoFocus
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[
+                styles.contentInput,
+                { color: colors.neutral[12] },
+              ]}
+              placeholder={t('addPost.placeholder')}
+              placeholderTextColor={colors.neutral[8]}
+              multiline
+              maxLength={MAX_CONTENT_LENGTH + 50} // Allow some overflow for visual feedback
+              value={content}
+              onChangeText={setContent}
+              autoFocus
+            />
+            <View style={styles.inputActions}>
+              <TouchableOpacity
+                onPress={handlePickImage}
+                style={styles.imageButton}
+                disabled={isSubmitting}
+              >
+                <IconSymbol
+                  name="photo"
+                  size={24}
+                  color={selectedImage ? colors.orange[9] : colors.neutral[9]}
+                />
+              </TouchableOpacity>
+              <Text
+                style={[
+                  styles.charCount,
+                  {
+                    color: isOverLimit
+                      ? '#ef4444'
+                      : remainingChars <= 20
+                      ? colors.orange[9]
+                      : colors.neutral[9],
+                  },
+                ]}
+              >
+                {content.length} / {MAX_CONTENT_LENGTH}
+              </Text>
+            </View>
+          </View>
           
           {/* Selected Image Preview */}
           {selectedImage && (
@@ -262,43 +291,6 @@ export function AddPostScreen() {
             </Text>
           )}
         </ScrollView>
-        
-        {/* Bottom Toolbar */}
-        <View
-          style={[
-            styles.toolbar,
-            { borderTopColor: colors.neutral[6], backgroundColor: colors.background },
-          ]}
-        >
-          <View style={styles.toolbarActions}>
-            <TouchableOpacity
-              onPress={handlePickImage}
-              style={styles.toolbarButton}
-              disabled={isSubmitting}
-            >
-              <IconSymbol
-                name="photo"
-                size={24}
-                color={selectedImage ? colors.orange[9] : colors.neutral[9]}
-              />
-            </TouchableOpacity>
-          </View>
-          
-          <Text
-            style={[
-              styles.charCount,
-              {
-                color: isOverLimit
-                  ? '#ef4444'
-                  : remainingChars <= 20
-                  ? colors.orange[9]
-                  : colors.neutral[9],
-              },
-            ]}
-          >
-            {remainingChars}
-          </Text>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -359,16 +351,28 @@ const styles = StyleSheet.create({
       fontSize: 14,
     }),
   },
+  inputWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
   contentInput: {
     ...applyFont({
       fontSize: 18,
     }),
     lineHeight: 24,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
     minHeight: 120,
     textAlignVertical: 'top',
+  },
+  inputActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  imageButton: {
+    padding: 4,
   },
   imagePreviewContainer: {
     marginHorizontal: 16,
@@ -415,21 +419,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     marginTop: -8,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-  },
-  toolbarActions: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  toolbarButton: {
-    padding: 4,
   },
   charCount: {
     ...applyFont({

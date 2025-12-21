@@ -175,9 +175,15 @@ export function useDeletePost() {
         queryClient.setQueryData(queryKeys.posts.detail(postId), context.previousPost);
       }
     },
-    onSettled: () => {
+    onSettled: (_, __, { authorId }) => {
       // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
+      
+      // Invalidate user profile to update postsCount
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(authorId) });
+      
+      // Invalidate user posts list to remove deleted post
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts.userPosts(authorId) });
     },
   });
 }

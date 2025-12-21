@@ -36,6 +36,8 @@ export interface UserDocument {
   // Status & moderation
   isVerified: boolean;           // Verified account badge
   isAdmin?: boolean;             // Admin account (special styling)
+  borderColor?: string;          // Border color for admin posts (static)
+  borderColors?: string[];       // Border colors for admin posts (animated gradient)
   isPrivate: boolean;            // Private account (future feature)
   isBanned: boolean;             // Account banned
   banReason?: string;            // Reason for ban
@@ -75,6 +77,8 @@ export interface PostDocument {
   authorAvatar?: string;         // Avatar URL (denormalized)
   authorIsVerified: boolean;     // Verified status (denormalized)
   authorIsAdmin?: boolean;       // Admin status (denormalized)
+  authorBorderColor?: string;    // Border color for admin posts (denormalized)
+  authorBorderColors?: string[]; // Border colors array for admin posts (denormalized)
   
   // Media (optional)
   mediaUrls?: string[];          // Array of media URLs
@@ -86,6 +90,9 @@ export interface PostDocument {
   savesCount?: number;            // Total saves (optional, for popularity calculation)
   sharesCount?: number;          // Total shares (optional, for popularity calculation)
   popularityScore: number;       // Calculated popularity score for featured feed
+  popularityBoost?: number;      // IAP boost value added to popularity score (doesn't decay)
+  boostTier?: 'basic' | 'premium' | 'ultra'; // IAP tier used for boost
+  boostAppliedAt?: Timestamp;   // When the boost was applied
   lastScoreUpdate?: Timestamp;   // Last time popularity score was updated
   
   // Post metadata
@@ -311,6 +318,73 @@ export type ModerationAction =
   | 'user_banned';
 
 // ============================================================================
+// ADS COLLECTION
+// Path: ads/{adId}
+// Purpose: Store advertisement content
+// ============================================================================
+export interface AdDocument {
+  id: string;                    // Document ID (auto-generated)
+  
+  // Ad Type
+  type: 'pinned' | 'feed';      // Type of ad
+  
+  // Advertiser Info
+  advertiserUsername: string;    // Advertiser username (mandatory)
+  advertiserAvatar?: string;     // Advertiser profile image (optional)
+  
+  // Content
+  title: string;                // Ad title/headline
+  content?: string;              // Ad description/text
+  imageUrls?: string[];         // Ad image URLs (multiple images)
+  videoUrl?: string;            // Ad video URL (optional)
+  mediaType?: 'image' | 'video'; // Type of media
+  
+  // Call to Action
+  ctaText?: string;             // Button text (e.g., "Learn More", "Shop Now")
+  ctaUrl?: string;              // URL to open when ad is clicked
+  ctaAction?: 'url' | 'deep_link' | 'in_app'; // Type of action
+  
+  // Targeting & Scheduling
+  isActive: boolean;            // Whether ad is currently active
+  startDate: Timestamp;         // When ad should start showing
+  endDate: Timestamp;          // When ad should stop showing
+  priority: number;             // Priority score (higher = more important)
+  
+  // Performance Tracking
+  impressions: number;          // Total number of times ad was shown
+  clicks: number;              // Total number of clicks
+  views?: number;              // Total number of views (if video)
+  
+  // Rotation & Display Logic
+  maxImpressions?: number;     // Maximum impressions before ad is paused
+  maxClicks?: number;          // Maximum clicks before ad is paused
+  displayFrequency?: number;   // How often to show (hours)
+  lastShownAt?: Timestamp;    // Last time this ad was shown to any user
+  
+  // Timestamps
+  createdAt: Timestamp;         // Ad creation time
+  updatedAt: Timestamp;         // Last update time
+}
+
+// ============================================================================
+// AD_IMPRESSIONS COLLECTION
+// Path: ad_impressions/{impressionId}
+// Purpose: Track individual user impressions
+// ============================================================================
+export interface AdImpressionDocument {
+  id: string;                   // Format: {adId}_{userId}
+  adId: string;                 // Reference to ads/{adId}
+  userId: string;               // Reference to users/{userId}
+  
+  impressions: number;          // Number of times shown to this user
+  lastShownAt: Timestamp;       // Last time shown to this user
+  clicks: number;               // Number of clicks by this user
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// ============================================================================
 // COLLECTION NAMES (constants)
 // ============================================================================
 export const COLLECTIONS = {
@@ -323,6 +397,8 @@ export const COLLECTIONS = {
   FOLLOWS: 'follows',
   MODERATION_QUEUE: 'moderation_queue',
   NOTIFICATIONS: 'notifications',
+  ADS: 'ads',
+  AD_IMPRESSIONS: 'ad_impressions',
 } as const;
 
 // ============================================================================

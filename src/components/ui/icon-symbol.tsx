@@ -20,6 +20,8 @@ const ICON_MAPPING: Record<string, string> = {
   'exclamationmark.triangle': 'report',
   'message': 'comment',
   'arrow.2.squarepath': 'repeat',
+  'rocket.fill': 'rocket-launch',
+  'rocket': 'rocket-launch',
 };
 
 /**

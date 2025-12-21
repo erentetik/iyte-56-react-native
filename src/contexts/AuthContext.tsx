@@ -229,6 +229,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (email) {
           console.log('Auto signing in with email:', email);
           const userCredential = await signInWithEmailLink(auth, email, actualActionUrl);
+          
+          // Only clear storage if sign-in was successful
           await AsyncStorage.removeItem(EMAIL_LINK_KEY);
           await AsyncStorage.removeItem(PENDING_EMAIL_LINK_KEY);
           console.log('Sign in successful!');
@@ -240,10 +242,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await AsyncStorage.setItem(USER_ID_KEY, userCredential.user.uid);
           }
         } else {
-          console.log('No saved email found for auto sign-in');
+          console.log('No saved email found for auto sign-in - VerifyScreen will handle it');
+          // Don't clear pending link if no email - let VerifyScreen handle it
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error auto signing in:', error);
+        // Don't clear storage on error - let VerifyScreen handle it
+        // This way VerifyScreen can still try to sign in or show appropriate error
+        // The error might be due to timing or the link might still be valid
       }
     }
   };

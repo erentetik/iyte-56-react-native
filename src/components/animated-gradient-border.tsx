@@ -9,8 +9,8 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 
-// Admin gradient colors - vibrant orange/gold/red palette (same as text)
-const GRADIENT_COLORS = [
+// Default admin gradient colors - fallback if not provided from user document
+const DEFAULT_GRADIENT_COLORS = [
   '#ff6b35', // Bright orange
   '#f7931e', // Golden orange
   '#ffcc00', // Gold
@@ -23,6 +23,7 @@ interface AnimatedGradientBorderProps {
   borderWidth?: number;
   borderRadius?: number;
   style?: ViewStyle;
+  borderColors?: string[]; // Border colors array from Firebase user document
 }
 
 export function AnimatedGradientBorder({
@@ -30,8 +31,14 @@ export function AnimatedGradientBorder({
   borderWidth = 2,
   borderRadius = 16,
   style,
+  borderColors,
 }: AnimatedGradientBorderProps) {
   const progress = useSharedValue(0);
+  
+  // Use border colors from Firebase user document, or fallback to default
+  const gradientColors = borderColors && borderColors.length > 0 
+    ? [...borderColors, borderColors[0]] // Add first color at end for seamless loop
+    : DEFAULT_GRADIENT_COLORS;
 
   useEffect(() => {
     progress.value = withRepeat(
@@ -47,7 +54,7 @@ export function AnimatedGradientBorder({
   // Create animated border color
   const animatedBorderStyle = useAnimatedStyle(() => {
     // Calculate which segment of the gradient we're in
-    const segmentCount = GRADIENT_COLORS.length - 1;
+    const segmentCount = gradientColors.length - 1;
     const segment = Math.floor(progress.value * segmentCount);
     const segmentProgress = (progress.value * segmentCount) % 1;
 
@@ -55,7 +62,7 @@ export function AnimatedGradientBorder({
     const borderColor = interpolateColor(
       segmentProgress,
       [0, 1],
-      [GRADIENT_COLORS[segment], GRADIENT_COLORS[segment + 1]]
+      [gradientColors[segment], gradientColors[segment + 1]]
     );
 
     return {

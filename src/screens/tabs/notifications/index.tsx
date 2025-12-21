@@ -1,3 +1,4 @@
+import { AvatarViewerModal } from '@/components/avatar-viewer-modal';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,7 +9,7 @@ import { applyFont } from '@/utils/apply-fonts';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -65,7 +66,7 @@ interface NotificationItemProps {
   onPress: () => void;
 }
 
-function NotificationItem({ notification, onPress }: NotificationItemProps) {
+function NotificationItem({ notification, onPress, onAvatarPress }: NotificationItemProps & { onAvatarPress?: (avatarUri: string) => void }) {
   const colors = useThemeColors();
   const { t } = useLanguage();
   
@@ -87,11 +88,16 @@ function NotificationItem({ notification, onPress }: NotificationItemProps) {
     >
       <View style={styles.notificationContent}>
         {hasAvatar ? (
-          <Image
-            source={{ uri: notification.actorAvatar }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
+          <TouchableOpacity
+            onPress={() => onAvatarPress?.(notification.actorAvatar!)}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={{ uri: notification.actorAvatar }}
+              style={styles.avatar}
+              contentFit="cover"
+            />
+          </TouchableOpacity>
         ) : (
           <View style={[styles.avatarPlaceholder, { backgroundColor: colors.neutral[6] }]}>
             <IconSymbol name="person.fill" size={20} color={colors.neutral[9]} />
@@ -135,6 +141,8 @@ export function NotificationsScreen() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
+  const [avatarViewerVisible, setAvatarViewerVisible] = useState(false);
+  const [avatarViewerUri, setAvatarViewerUri] = useState<string | undefined>();
   
   const { 
     data: notifications, 
@@ -164,15 +172,22 @@ export function NotificationsScreen() {
     }
   }, [user?.uid, router, markAsReadMutation]);
   
+  // Handle avatar press
+  const handleAvatarPress = useCallback((avatarUri: string) => {
+    setAvatarViewerUri(avatarUri);
+    setAvatarViewerVisible(true);
+  }, []);
+
   // Render notification item
   const renderNotification = useCallback(
     ({ item }: { item: NotificationDocument }) => (
       <NotificationItem
         notification={item}
         onPress={() => handleNotificationPress(item)}
+        onAvatarPress={handleAvatarPress}
       />
     ),
-    [handleNotificationPress]
+    [handleNotificationPress, handleAvatarPress]
   );
   
   // Render empty state
@@ -239,6 +254,14 @@ export function NotificationsScreen() {
           />
         }
         showsVerticalScrollIndicator={true}
+      />
+      <AvatarViewerModal
+        visible={avatarViewerVisible}
+        avatarUri={avatarViewerUri}
+        onClose={() => {
+          setAvatarViewerVisible(false);
+          setAvatarViewerUri(undefined);
+        }}
       />
     </SafeAreaView>
   );

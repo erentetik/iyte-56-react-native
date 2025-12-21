@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Image, StyleSheet, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, Image, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import { AvatarViewerModal } from '../avatar-viewer-modal';
 import { IconSymbol } from './icon-symbol';
 
 interface AvatarProps {
@@ -8,10 +9,21 @@ interface AvatarProps {
   size?: number;
   className?: string;
   style?: ViewStyle;
+  onPress?: () => void; // Optional custom onPress handler
 }
 
-export function Avatar({ src, alt, size = 40, style, ...props }: AvatarProps) {
-  return (
+export function Avatar({ src, alt, size = 40, style, onPress, ...props }: AvatarProps) {
+  const [showViewer, setShowViewer] = useState(false);
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else if (src) {
+      setShowViewer(true);
+    }
+  };
+
+  const AvatarContent = (
     <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }, style]}>
       {src ? (
         <Image source={{ uri: src }} style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]} />
@@ -22,6 +34,26 @@ export function Avatar({ src, alt, size = 40, style, ...props }: AvatarProps) {
       )}
     </View>
   );
+
+  // Only make clickable if there's a source image or custom onPress
+  if (src || onPress) {
+    return (
+      <>
+        <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
+          {AvatarContent}
+        </TouchableOpacity>
+        {src && (
+          <AvatarViewerModal
+            visible={showViewer}
+            avatarUri={src}
+            onClose={() => setShowViewer(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  return AvatarContent;
 }
 
 const styles = StyleSheet.create({

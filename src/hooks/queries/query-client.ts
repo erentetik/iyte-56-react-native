@@ -100,4 +100,11 @@ export const queryKeys = {
     all: ['notifications'] as const,
     userNotifications: (userId: string) => [...queryKeys.notifications.all, 'user', userId] as const,
   },
+  
+  // Ads
+  ads: {
+    all: ['ads'] as const,
+    pinned: () => [...queryKeys.ads.all, 'pinned'] as const,
+    feed: () => [...queryKeys.ads.all, 'feed'] as const,
+  },
 };

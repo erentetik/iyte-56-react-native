@@ -169,7 +169,8 @@
     "submitError": "Gönderi oluşturulamadı. Lütfen tekrar deneyin.",
     "discardTitle": "Gönderiyi Sil?",
     "discardMessage": "Bu gönderiyi silmek istediğinizden emin misiniz?",
-    "discard": "Sil"
+    "discard": "Sil",
+    "boost": "ÖNE ÇIKAR"
   },
   "postDetail": {
     "title": "Gönderi",

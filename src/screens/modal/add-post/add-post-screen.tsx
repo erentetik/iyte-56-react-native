@@ -4,7 +4,7 @@
  * Allows users to create new posts with optional image and anonymous posting.
  */
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { getPaywall, getPaywallProducts } from '@/config/adapty';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCreatePost } from '@/hooks/queries/use-posts';
@@ -12,35 +12,26 @@ import { useUser } from '@/hooks/queries/use-user';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { uploadPostImage } from '@/services/storage';
 import { UserDocument } from '@/types/firestore';
-import { applyFont } from '@/utils/apply-fonts';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// Import ImagePicker with fallback for environments where native module is not available
-let ImagePicker: typeof import('expo-image-picker') | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  ImagePicker = require('expo-image-picker');
-} catch {
-  console.warn('expo-image-picker native module not available');
-}
-
-const MAX_CONTENT_LENGTH = 280;
+import {
+  AddPostAnonymousToggle,
+  AddPostAuthorRow,
+  AddPostContentInput,
+  AddPostHeader,
+  AddPostImagePreview,
+  MAX_CONTENT_LENGTH,
+  MAX_IMAGES,
+  useImagePicker,
+} from './components';
 
 export function AddPostScreen() {
   const colors = useThemeColors();
@@ -56,9 +47,18 @@ export function AddPostScreen() {
   
   // Form state
   const [content, setContent] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingPaywall, setIsLoadingPaywall] = useState(false);
+  
+  // Image picker hook
+  const {
+    selectedImages,
+    setSelectedImages,
+    canAddMoreImages,
+    handlePickImage,
+    handleRemoveImage,
+  } = useImagePicker(MAX_IMAGES);
   
   // Character count
   const remainingChars = MAX_CONTENT_LENGTH - content.length;
@@ -66,58 +66,6 @@ export function AddPostScreen() {
   
   // Can submit check
   const canSubmit = content.trim().length > 0 && !isOverLimit && !isSubmitting;
-  
-  /**
-   * Pick an image from the library
-   */
-  const handlePickImage = async () => {
-    // Check if ImagePicker is available
-    if (!ImagePicker) {
-      Alert.alert(
-        t('addPost.permissionDenied'),
-        t('errors.imagePickerUnavailable')
-      );
-      return;
-    }
-    
-    try {
-      // Request permission
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert(
-          t('addPost.permissionDenied'),
-          t('addPost.permissionMessage')
-        );
-        return;
-      }
-      
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-      
-      if (!result.canceled && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Image picker error:', error);
-      Alert.alert(
-        t('common.error'),
-        t('errors.imagePickerError')
-      );
-    }
-  };
-  
-  /**
-   * Remove selected image
-   */
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-  };
   
   /**
    * Submit the post
@@ -128,32 +76,79 @@ export function AddPostScreen() {
     setIsSubmitting(true);
     
     try {
-      let imageUrl: string | undefined;
+      let imageUrls: string[] | undefined;
       
-      // Upload image if selected
-      if (selectedImage) {
-        imageUrl = await uploadPostImage(selectedImage, userProfile.id);
+      // Upload all images if selected
+      if (selectedImages.length > 0) {
+        console.log(`Starting upload of ${selectedImages.length} image(s)...`);
+        
+        // Upload all images in parallel with better error handling
+        const uploadPromises = selectedImages.map(async (imageUri: string, index: number) => {
+          try {
+            console.log(`Uploading image ${index + 1}/${selectedImages.length}...`);
+            const url = await uploadPostImage(imageUri, userProfile.id);
+            console.log(`Image ${index + 1} uploaded successfully`);
+            return url;
+          } catch (error) {
+            console.error(`Failed to upload image ${index + 1}:`, error);
+            // Re-throw with user-friendly message (already formatted by storage service)
+            const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+            throw new Error(`Image ${index + 1}: ${errorMessage}`);
+          }
+        });
+        
+        // Wait for all uploads, but catch individual failures
+        const results = await Promise.allSettled(uploadPromises);
+        
+        // Check if any uploads failed
+        const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+        if (failed.length > 0) {
+          const errorMessages = failed.map((r: PromiseRejectedResult) => 
+            r.reason?.message || 'Failed to upload image'
+          ).filter(Boolean);
+          
+          // Create user-friendly error message
+          if (failed.length === selectedImages.length) {
+            // All images failed
+            throw new Error(errorMessages[0] || 'Failed to upload images. Please try again.');
+          } else {
+            // Some images failed
+            throw new Error(`${failed.length} of ${selectedImages.length} image(s) failed to upload. ${errorMessages[0] || 'Please try again.'}`);
+          }
+        }
+        
+        // Extract successful URLs
+        imageUrls = results
+          .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+          .map((r: PromiseFulfilledResult<string>) => r.value);
+        
+        console.log(`Successfully uploaded ${imageUrls.length} image(s)`);
       }
       
       // Create post
+      console.log('Creating post...');
       await createPostMutation.mutateAsync({
         author: userProfile as UserDocument,
         input: {
           content: content.trim(),
-          mediaUrls: imageUrl ? [imageUrl] : undefined,
-          mediaType: imageUrl ? 'image' : undefined,
+          mediaUrls: imageUrls || [],
+          mediaType: imageUrls && imageUrls.length > 0 ? 'image' : undefined,
           isAnonymous,
           visibility: 'public',
         },
       });
       
+      console.log('Post created successfully');
+      
       // Close modal on success
       router.back();
     } catch (error) {
       console.error('Error creating post:', error);
+      // Error message is already user-friendly from storage service
+      const errorMessage = error instanceof Error ? error.message : t('addPost.submitError');
       Alert.alert(
         t('common.error'),
-        t('addPost.submitError')
+        errorMessage
       );
     } finally {
       setIsSubmitting(false);
@@ -164,7 +159,7 @@ export function AddPostScreen() {
    * Handle close/cancel
    */
   const handleClose = () => {
-    if (content.trim() || selectedImage) {
+    if (content.trim() || selectedImages.length > 0) {
       Alert.alert(
         t('addPost.discardTitle'),
         t('addPost.discardMessage'),
@@ -177,6 +172,68 @@ export function AddPostScreen() {
       router.back();
     }
   };
+
+  /**
+   * Handle boost post button - fetch Adapty paywall
+   */
+  const handleBoostPost = async () => {
+    setIsLoadingPaywall(true);
+    try {
+      const paywall = await getPaywall('boost_post');
+      
+      if (!paywall) {
+        Alert.alert(
+          'Boost Unavailable',
+          'Boost paywall is not available at the moment. Please try again later.'
+        );
+        return;
+      }
+
+      // Get products from the paywall
+      const products = await getPaywallProducts(paywall);
+      
+      if (products.length === 0) {
+        Alert.alert(
+          'No Boost Options',
+          'No boost products are available at the moment. Please configure products in Adapty Dashboard and App Store Connect.'
+        );
+        return;
+      }
+
+      // Display paywall information
+      const productInfo = products.map((product: { localizedTitle?: string; vendorProductId: string; localizedPrice?: string }, index: number) => {
+        return `${index + 1}. ${product.localizedTitle || product.vendorProductId} - ${product.localizedPrice || 'N/A'}`;
+      }).join('\n');
+
+      Alert.alert(
+        'Boost Your Post',
+        `Available boost options:\n\n${productInfo}\n\nPaywall ID: ${paywall.placementId || 'N/A'}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Error fetching paywall:', error);
+      
+      // Handle specific Adapty errors
+      let errorMessage = 'Failed to load boost options. Please try again later.';
+      
+      if (error?.message) {
+        if (error.message.includes('noProductIDsFound') || error.message.includes('No valid In-App Purchase products')) {
+          errorMessage = 'Boost products are not configured yet. Please configure products in App Store Connect and Adapty Dashboard.';
+        } else if (error.message.includes('network') || error.message.includes('connection')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert(
+        'Error',
+        errorMessage
+      );
+    } finally {
+      setIsLoadingPaywall(false);
+    }
+  };
   
   return (
     <SafeAreaView
@@ -187,137 +244,40 @@ export function AddPostScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            { borderBottomColor: colors.neutral[6] },
-          ]}
-        >
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <IconSymbol name="xmark" size={24} color={colors.neutral[12]} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            style={[
-              styles.submitButton,
-              { backgroundColor: canSubmit ? colors.orange[9] : colors.neutral[6] },
-            ]}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>{t('addPost.post')}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        <AddPostHeader
+          onClose={handleClose}
+          onBoost={handleBoostPost}
+          onSubmit={handleSubmit}
+          canSubmit={canSubmit}
+          isSubmitting={isSubmitting}
+          isLoadingPaywall={isLoadingPaywall}
+        />
         
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-          {/* Author Info */}
-          <View style={styles.authorRow}>
-            <Text style={[styles.authorUsername, { color: colors.orange[9] }]}>
-              @{isAnonymous ? 'anonymous' : (userProfile?.username || 'user')}
-            </Text>
-          </View>
-          
-          {/* Content Input */}
-          <TextInput
-            style={[
-              styles.contentInput,
-              { color: colors.neutral[12] },
-            ]}
-            placeholder={t('addPost.placeholder')}
-            placeholderTextColor={colors.neutral[8]}
-            multiline
-            maxLength={MAX_CONTENT_LENGTH + 50} // Allow some overflow for visual feedback
-            value={content}
-            onChangeText={setContent}
-            autoFocus
+          <AddPostAuthorRow
+            username={userProfile?.username}
+            isAnonymous={isAnonymous}
           />
           
-          {/* Selected Image Preview */}
-          {selectedImage && (
-            <View style={styles.imagePreviewContainer}>
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.imagePreview}
-                resizeMode="cover"
-              />
-              <TouchableOpacity
-                style={[styles.removeImageButton, { backgroundColor: colors.neutral[1] }]}
-                onPress={handleRemoveImage}
-              >
-                <IconSymbol name="xmark.circle.fill" size={24} color={colors.neutral[12]} />
-              </TouchableOpacity>
-            </View>
-          )}
+          <AddPostContentInput
+            content={content}
+            onContentChange={setContent}
+            onPickImage={handlePickImage}
+            hasImages={selectedImages.length > 0}
+            canAddMoreImages={canAddMoreImages}
+            isSubmitting={isSubmitting}
+          />
           
-          {/* Anonymous Toggle */}
-          <View
-            style={[
-              styles.optionRow,
-              { borderTopColor: colors.neutral[6] },
-            ]}
-          >
-            <View style={styles.optionInfo}>
-              <IconSymbol name="person.fill.questionmark" size={20} color={colors.neutral[9]} />
-              <Text style={[styles.optionLabel, { color: colors.neutral[12] }]}>
-                {t('addPost.postAnonymously')}
-              </Text>
-            </View>
-            <Switch
-              value={isAnonymous}
-              onValueChange={setIsAnonymous}
-              trackColor={{ false: colors.neutral[6], true: colors.orange[9] }}
-              thumbColor="#fff"
-            />
-          </View>
+          <AddPostImagePreview
+            images={selectedImages}
+            onRemoveImage={handleRemoveImage}
+          />
           
-          {isAnonymous && (
-            <Text style={[styles.anonymousNote, { color: colors.neutral[9] }]}>
-              {t('addPost.anonymousNote')}
-            </Text>
-          )}
+          <AddPostAnonymousToggle
+            isAnonymous={isAnonymous}
+            onToggle={setIsAnonymous}
+          />
         </ScrollView>
-        
-        {/* Bottom Toolbar */}
-        <View
-          style={[
-            styles.toolbar,
-            { borderTopColor: colors.neutral[6], backgroundColor: colors.background },
-          ]}
-        >
-          <View style={styles.toolbarActions}>
-            <TouchableOpacity
-              onPress={handlePickImage}
-              style={styles.toolbarButton}
-              disabled={isSubmitting}
-            >
-              <IconSymbol
-                name="photo"
-                size={24}
-                color={selectedImage ? colors.orange[9] : colors.neutral[9]}
-              />
-            </TouchableOpacity>
-          </View>
-          
-          <Text
-            style={[
-              styles.charCount,
-              {
-                color: isOverLimit
-                  ? '#ef4444'
-                  : remainingChars <= 20
-                  ? colors.orange[9]
-                  : colors.neutral[9],
-              },
-            ]}
-          >
-            {remainingChars}
-          </Text>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -330,128 +290,7 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  submitButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: '#fff',
-    ...applyFont({
-      fontWeight: '600',
-      fontSize: 15,
-    }),
-  },
   scrollView: {
     flex: 1,
-  },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 8,
-  },
-  authorName: {
-    ...applyFont({
-      fontSize: 16,
-      fontWeight: '600',
-    }),
-  },
-  authorUsername: {
-    ...applyFont({
-      fontSize: 14,
-    }),
-  },
-  contentInput: {
-    ...applyFont({
-      fontSize: 18,
-    }),
-    lineHeight: 24,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  imagePreviewContainer: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    borderRadius: 12,
-    padding: 4,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    marginTop: 8,
-  },
-  optionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  optionLabel: {
-    ...applyFont({
-      fontSize: 16,
-    }),
-  },
-  anonymousNote: {
-    ...applyFont({
-      fontSize: 13,
-    }),
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    marginTop: -8,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-  },
-  toolbarActions: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  toolbarButton: {
-    padding: 4,
-  },
-  charCount: {
-    ...applyFont({
-      fontSize: 14,
-      fontWeight: '500',
-    }),
   },
 });

@@ -15,7 +15,7 @@ module.exports = {
   expo: {
     name: 'IYTE56',
     slug: 'iyte-56',
-    version: '1.0.1',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/app_logo.png',
     scheme: 'iyte56',

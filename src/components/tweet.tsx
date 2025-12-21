@@ -6,7 +6,9 @@ import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AnimatedGradientText } from './animated-gradient-text';
+import { AvatarViewerModal } from './avatar-viewer-modal';
 import { GradientBorder } from './gradient-border';
+import { ImageViewerModal } from './image-viewer-modal';
 import { IconSymbol } from './ui/icon-symbol';
 
 export interface TweetData {
@@ -17,6 +19,8 @@ export interface TweetData {
     username: string;
     avatar?: string;
     isAdmin?: boolean;
+    borderColor?: string; // Border color from Firebase user document
+    borderColors?: string[]; // Border colors array from Firebase user document
   };
   content: string;
   timestamp: string;
@@ -26,7 +30,8 @@ export interface TweetData {
   isSaved?: boolean;
   isReported?: boolean;
   isAnonymous?: boolean;
-  imageUrl?: string;
+  imageUrl?: string; // Deprecated: use imageUrls instead
+  imageUrls?: string[]; // Array of image URLs for multiple images
 }
 
 interface TweetProps {
@@ -45,6 +50,14 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
   const colors = useThemeColors();
   const { t } = useLanguage();
   const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showAvatarViewer, setShowAvatarViewer] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  
+  // Get images: prefer imageUrls array, fallback to imageUrl for backward compatibility
+  const images = tweet.imageUrls && tweet.imageUrls.length > 0 
+    ? tweet.imageUrls 
+    : (tweet.imageUrl ? [tweet.imageUrl] : []);
 
   // Display anonymous info if post is anonymous
   const displayUsername = tweet.isAnonymous ? t('common.anonymousUsername') : tweet.author.username;
@@ -88,11 +101,16 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
         <View style={styles.headerRow}>
           <View style={styles.userInfo}>
             {showAvatar && (
-              <Image
-                source={{ uri: tweet.author.avatar }}
-                style={styles.avatar}
-                contentFit="cover"
-              />
+              <TouchableOpacity
+                onPress={() => setShowAvatarViewer(true)}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={{ uri: tweet.author.avatar }}
+                  style={styles.avatar}
+                  contentFit="cover"
+                />
+              </TouchableOpacity>
             )}
             <View style={styles.usernameContainer}>
               {isAdmin ? (
@@ -112,15 +130,59 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
         {/* Post Content */}
         <Text style={[styles.content, { color: colors.neutral[12] }]}>{tweet.content}</Text>
         
-        {/* Image - if exists */}
-        {tweet.imageUrl && (
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: tweet.imageUrl }}
-              style={styles.image}
-              contentFit="cover"
-              transition={200}
-            />
+        {/* Images - if exists */}
+        {images.length > 0 && (
+          <View style={styles.imagesContainer}>
+            {images.length === 1 ? (
+              <TouchableOpacity
+                style={styles.imageContainer}
+                onPress={() => {
+                  setSelectedImageIndex(0);
+                  setShowImageViewer(true);
+                }}
+                activeOpacity={0.9}
+              >
+                <Image
+                  source={{ uri: images[0] }}
+                  style={styles.image}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.multipleImagesContainer}>
+                {images.slice(0, 4).map((imageUrl, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.multipleImageItem,
+                      images.length === 2 && styles.twoImagesItem,
+                      images.length === 3 && index === 0 && styles.threeImagesFirstItem,
+                      images.length === 3 && index > 0 && styles.threeImagesOtherItem,
+                      images.length >= 4 && index === 0 && styles.fourImagesFirstItem,
+                      images.length >= 4 && index > 0 && styles.fourImagesOtherItem,
+                    ]}
+                    onPress={() => {
+                      setSelectedImageIndex(index);
+                      setShowImageViewer(true);
+                    }}
+                    activeOpacity={0.9}
+                  >
+                    <Image
+                      source={{ uri: imageUrl }}
+                      style={styles.multipleImage}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                    {images.length > 4 && index === 3 && (
+                      <View style={styles.moreImagesOverlay}>
+                        <Text style={styles.moreImagesText}>+{images.length - 4}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         )}
         
@@ -192,7 +254,11 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
     <>
       <View style={styles.cardWrapper}>
         {isAdmin ? (
-          <GradientBorder borderWidth={2} borderRadius={16}>
+          <GradientBorder 
+            borderWidth={2} 
+            borderRadius={16}
+            borderColor={tweet.author.borderColor}
+          >
             {CardContent}
           </GradientBorder>
         ) : (
@@ -208,6 +274,21 @@ export function Tweet({ tweet, onPress, onLike, onReply, onReport, onSave, onDel
         onBlock={onBlock}
         canBlock={!isOwnPost && !tweet.isAnonymous && !!tweet.author.id}
       />
+      {showAvatar && tweet.author.avatar && (
+        <AvatarViewerModal
+          visible={showAvatarViewer}
+          avatarUri={tweet.author.avatar}
+          onClose={() => setShowAvatarViewer(false)}
+        />
+      )}
+      {images.length > 0 && (
+        <ImageViewerModal
+          visible={showImageViewer}
+          imageUris={images}
+          initialIndex={selectedImageIndex}
+          onClose={() => setShowImageViewer(false)}
+        />
+      )}
     </>
   );
 }
@@ -269,14 +350,66 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 16,
   }),
-  imageContainer: {
+  imagesContainer: {
     marginBottom: 16,
+  },
+  imageContainer: {
     borderRadius: 12,
     overflow: 'hidden',
   },
   image: {
     width: '100%',
     height: 200,
+  },
+  multipleImagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  multipleImageItem: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  twoImagesItem: {
+    width: '48%',
+    height: 200,
+  },
+  threeImagesFirstItem: {
+    width: '100%',
+    height: 200,
+    marginBottom: 4,
+  },
+  threeImagesOtherItem: {
+    width: '48%',
+    height: 150,
+  },
+  fourImagesFirstItem: {
+    width: '100%',
+    height: 200,
+    marginBottom: 4,
+  },
+  fourImagesOtherItem: {
+    width: '32%',
+    height: 150,
+  },
+  multipleImage: {
+    width: '100%',
+    height: '100%',
+  },
+  moreImagesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreImagesText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
   },
   actionsRow: {
     flexDirection: 'row',

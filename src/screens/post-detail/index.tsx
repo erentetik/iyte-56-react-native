@@ -4,13 +4,13 @@
  * Displays a single post with its comments and allows adding new comments.
  */
 
-import { AnimatedGradientText } from '@/components/animated-gradient-text';
-import { Tweet, TweetData } from '@/components/tweet';
+import { AvatarViewerModal } from '@/components/avatar-viewer-modal';
+import { Tweet } from '@/components/tweet';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useCommentReplies, useCreateComment, useDeleteComment, usePostComments } from '@/hooks/queries/use-comments';
-import { useHasLikedComment, useHasLikedPost, useToggleCommentLike, useToggleLike } from '@/hooks/queries/use-likes';
+import { useCreateComment, useDeleteComment, usePostComments } from '@/hooks/queries/use-comments';
+import { useHasLikedPost, useToggleLike } from '@/hooks/queries/use-likes';
 import { useDeletePost, usePost } from '@/hooks/queries/use-posts';
 import { useHasReportedPost } from '@/hooks/queries/use-reports';
 import { useHasSavedPost, useToggleSave } from '@/hooks/queries/use-saves';
@@ -19,11 +19,9 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { PostOptionsModal } from '@/screens/modal/post-options';
 import { ReportCommentModal } from '@/screens/modal/report-comment';
 import { ReportPostModal } from '@/screens/modal/report-post';
-import { CommentDocument, PostDocument, UserDocument } from '@/types/firestore';
+import { CommentDocument, UserDocument } from '@/types/firestore';
 import { applyFont } from '@/utils/apply-fonts';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Timestamp } from 'firebase/firestore';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActionSheetIOS,
@@ -40,510 +38,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-/**
- * Format timestamp to relative time string
- */
-function formatTimestamp(timestamp: Timestamp | undefined, t: (key: string) => string): string {
-  if (!timestamp) return '';
-  
-  const now = new Date();
-  const date = timestamp.toDate();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  
-  if (diffSeconds < 60) return `${diffSeconds}${t('time.seconds')} ${t('time.ago')}`;
-  if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes > 1 ? t('time.minutesPlural') : t('time.minute')} ${t('time.ago')}`;
-  if (diffHours < 24) return `${diffHours} ${diffHours > 1 ? t('time.hoursPlural') : t('time.hour')} ${t('time.ago')}`;
-  if (diffDays < 7) return `${diffDays} ${diffDays > 1 ? t('time.daysPlural') : t('time.day')} ${t('time.ago')}`;
-  
-  return date.toLocaleDateString();
-}
-
-/**
- * Transform PostDocument to TweetData
- */
-function postToTweet(post: PostDocument, isLiked: boolean, isSaved: boolean, isReported: boolean, t: (key: string) => string): TweetData {
-  return {
-    id: post.id,
-    author: {
-      name: post.authorUsername,
-      username: post.authorUsername,
-      avatar: post.authorAvatar,
-      isAdmin: post.authorIsAdmin,
-    },
-    content: post.content,
-    timestamp: formatTimestamp(post.createdAt, t),
-    likes: post.likesCount,
-    replies: post.commentsCount,
-    isLiked,
-    isSaved,
-    isReported,
-    isAnonymous: post.isAnonymous,
-    imageUrl: post.mediaUrls?.[0],
-  };
-}
-
-/**
- * Reply Item Component (nested reply) - Card style
- */
-interface ReplyItemProps {
-  reply: CommentDocument;
-  onReply?: () => void;
-  isReplyTarget?: boolean;
-  isLast?: boolean;
-  currentUserId?: string;
-  userProfile?: UserDocument;
-  onReport?: (comment: CommentDocument) => void;
-  onDelete?: (comment: CommentDocument) => void;
-}
-
-function ReplyItem({ 
-  reply, 
-  onReply, 
-  isReplyTarget, 
-  isLast,
-  currentUserId,
-  userProfile,
-  onReport,
-  onDelete,
-}: ReplyItemProps) {
-  const { t } = useLanguage();
-  const colors = useThemeColors();
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const isAdmin = reply.authorIsAdmin === true;
-  const showAvatar = isAdmin && reply.authorAvatar;
-  const isOwnComment = !!(currentUserId && reply.authorId === currentUserId);
-  
-  // Check if user has liked this comment
-  const { data: isLiked } = useHasLikedComment(reply.id, currentUserId);
-  const toggleCommentLikeMutation = useToggleCommentLike();
-  
-  // Handle like
-  const handleLike = useCallback(() => {
-    if (!userProfile) return;
-    toggleCommentLikeMutation.mutate({
-      commentId: reply.id,
-      user: userProfile,
-    });
-  }, [userProfile, reply.id, toggleCommentLikeMutation]);
-  
-  // Handle report
-  const handleReport = useCallback(() => {
-    setShowOptionsModal(false);
-    onReport?.(reply);
-  }, [reply, onReport]);
-  
-  // Handle delete
-  const handleDelete = useCallback(() => {
-    setShowOptionsModal(false);
-    Alert.alert(
-      t('postOptions.deleteTitle'),
-      t('postOptions.deleteMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('postOptions.delete'),
-          style: 'destructive',
-          onPress: () => onDelete?.(reply),
-        },
-      ]
-    );
-  }, [reply, onDelete, t]);
-  
-  return (
-    <View style={styles.commentCardWrapper}>
-      <View style={[
-        styles.commentCard,
-        {
-          backgroundColor: colors.backgroundEmphasis,
-          borderColor: colors.neutral[6],
-        },
-        isReplyTarget && { borderColor: colors.orange[6] }
-      ]}>
-        {/* Header row */}
-        <View style={styles.commentHeaderRow}>
-          <View style={styles.commentUserInfo}>
-            {showAvatar && (
-              <Image
-                source={{ uri: reply.authorAvatar }}
-                style={styles.commentAvatar}
-                contentFit="cover"
-              />
-            )}
-            <View style={styles.commentUsernameContainer}>
-              {isAdmin ? (
-                <AnimatedGradientText text={`@${reply.authorUsername || t('common.user')}`} style={styles.commentUsername} />
-              ) : (
-                <Text style={[styles.commentUsername, { color: colors.orange[9] }]}>
-                  @{reply.authorUsername || t('common.user')}
-                </Text>
-              )}
-            </View>
-            <Text style={[styles.commentDot, { color: colors.neutral[9] }]}>•</Text>
-            <Text style={[styles.commentTime, { color: colors.neutral[9] }]}>
-              {formatTimestamp(reply.createdAt, t)}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.moreButton}
-            onPress={() => setShowOptionsModal(true)}
-          >
-            <IconSymbol name="ellipsis" size={14} color={colors.neutral[9]} />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Content */}
-        <Text style={[styles.commentContent, { color: colors.neutral[12] }]}>
-          {reply.content}
-        </Text>
-        
-        {/* Action pills */}
-        <View style={styles.commentActionsRow}>
-          <View style={styles.commentActionsLeft}>
-            <TouchableOpacity 
-              style={[
-                styles.smallPillButton, 
-                { 
-                  borderColor: isLiked ? colors.orange[6] : colors.neutral[6],
-                  backgroundColor: isLiked ? colors.orange[2] : 'transparent',
-                }
-              ]}
-              onPress={handleLike}
-            >
-              <IconSymbol 
-                name={isLiked ? "heart.fill" : "heart"} 
-                size={14} 
-                color={isLiked ? colors.orange[9] : colors.neutral[9]} 
-              />
-              <Text style={[
-                styles.smallPillText, 
-                { color: isLiked ? colors.orange[9] : colors.neutral[9] }
-              ]}>
-                {reply.likesCount}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity 
-            style={[styles.responsePill, { borderColor: colors.neutral[6] }]}
-            onPress={onReply}
-          >
-            <IconSymbol name="message" size={14} color={colors.neutral[9]} />
-            <View style={[styles.pillSeparator, { backgroundColor: colors.neutral[6] }]} />
-            <Text style={[styles.responsePillText, { color: colors.neutral[9] }]}>Reply</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      {/* Reply Options Modal */}
-      <PostOptionsModal
-        visible={showOptionsModal}
-        isOwnPost={isOwnComment}
-        onClose={() => setShowOptionsModal(false)}
-        onDelete={handleDelete}
-        onReport={handleReport}
-      />
-    </View>
-  );
-}
-
-/**
- * Replies Section Component
- */
-interface RepliesSectionProps {
-  postId: string;
-  parentCommentId: string;
-  onReplyToComment: (comment: CommentDocument) => void;
-  replyingToId?: string;
-  currentUserId?: string;
-  userProfile?: UserDocument;
-  onReport?: (comment: CommentDocument) => void;
-  onDelete?: (comment: CommentDocument) => void;
-}
-
-function RepliesSection({ 
-  postId, 
-  parentCommentId, 
-  onReplyToComment, 
-  replyingToId,
-  currentUserId,
-  userProfile,
-  onReport,
-  onDelete,
-}: RepliesSectionProps) {
-  const colors = useThemeColors();
-  const { t } = useLanguage();
-  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useCommentReplies(postId, parentCommentId);
-  
-  const replies = useMemo((): CommentDocument[] => {
-    return data?.pages.flatMap((page: { comments: CommentDocument[] }) => page.comments) ?? [];
-  }, [data]);
-  
-  if (isLoading) {
-    return (
-      <View style={styles.repliesLoading}>
-        <ActivityIndicator size="small" color={colors.orange[9]} />
-      </View>
-    );
-  }
-  
-  if (error) {
-    console.error('Error loading replies:', error);
-    return (
-      <View style={styles.repliesError}>
-        <Text style={[styles.repliesErrorText, { color: colors.neutral[11] }]}>
-          {t('postDetail.repliesError')}
-        </Text>
-      </View>
-    );
-  }
-  
-  if (replies.length === 0) {
-    return (
-      <View style={styles.repliesEmpty}>
-        <Text style={[styles.repliesEmptyText, { color: colors.neutral[9] }]}>
-          {t('postDetail.noReplies')}
-        </Text>
-      </View>
-    );
-  }
-  
-  return (
-    <View style={styles.repliesContainer}>
-      {replies.map((reply, index) => (
-        <ReplyItem
-          key={reply.id}
-          reply={reply}
-          onReply={() => onReplyToComment(reply)}
-          isReplyTarget={replyingToId === reply.id}
-          isLast={index === replies.length - 1 && !hasNextPage}
-          currentUserId={currentUserId}
-          userProfile={userProfile}
-          onReport={onReport}
-          onDelete={onDelete}
-        />
-      ))}
-      {hasNextPage && (
-        <TouchableOpacity
-          style={styles.loadMoreReplies}
-          onPress={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-        >
-          {isFetchingNextPage ? (
-            <ActivityIndicator size="small" color={colors.orange[9]} />
-          ) : (
-            <Text style={[styles.loadMoreText, { color: colors.orange[9] }]}>
-              {t('postDetail.loadMoreReplies')}
-            </Text>
-          )}
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-/**
- * Comment Item Component - Card style with expandable replies
- */
-interface CommentItemProps {
-  comment: CommentDocument;
-  postId: string;
-  onReply?: () => void;
-  isReplyTarget?: boolean;
-  onReplyToComment: (comment: CommentDocument) => void;
-  replyingToId?: string;
-  currentUserId?: string;
-  userProfile?: UserDocument;
-  onReport?: (comment: CommentDocument) => void;
-  onDelete?: (comment: CommentDocument) => void;
-}
-
-function CommentItem({ 
-  comment, 
-  postId, 
-  onReply, 
-  isReplyTarget, 
-  onReplyToComment, 
-  replyingToId,
-  currentUserId,
-  userProfile,
-  onReport,
-  onDelete,
-}: CommentItemProps) {
-  const colors = useThemeColors();
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const [showReplies, setShowReplies] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const isAdmin = comment.authorIsAdmin === true;
-  const showAvatar = isAdmin && comment.authorAvatar;
-  const isOwnComment = !!(currentUserId && comment.authorId === currentUserId);
-  
-  // Check if user has liked this comment
-  const { data: isLiked } = useHasLikedComment(comment.id, currentUserId);
-  const toggleCommentLikeMutation = useToggleCommentLike();
-  
-  // Handle like
-  const handleLike = useCallback(() => {
-    if (!userProfile) return;
-    toggleCommentLikeMutation.mutate({
-      commentId: comment.id,
-      user: userProfile,
-    });
-  }, [userProfile, comment.id, toggleCommentLikeMutation]);
-  
-  // Handle report
-  const handleReport = useCallback(() => {
-    setShowOptionsModal(false);
-    onReport?.(comment);
-  }, [comment, onReport]);
-  
-  // Handle delete
-  const handleDelete = useCallback(() => {
-    setShowOptionsModal(false);
-    Alert.alert(
-      t('postOptions.deleteTitle'),
-      t('postOptions.deleteMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('postOptions.delete'),
-          style: 'destructive',
-          onPress: () => onDelete?.(comment),
-        },
-      ]
-    );
-  }, [comment, onDelete, t]);
-  
-  return (
-    <View>
-      <View style={styles.commentCardWrapper}>
-        <View style={[
-          styles.commentCard,
-          {
-            backgroundColor: colors.backgroundEmphasis,
-            borderColor: colors.neutral[6],
-          },
-          isReplyTarget && { borderColor: colors.orange[6] }
-        ]}>
-          {/* Header row */}
-          <View style={styles.commentHeaderRow}>
-            <View style={styles.commentUserInfo}>
-              {showAvatar && (
-                <Image
-                  source={{ uri: comment.authorAvatar }}
-                  style={styles.commentAvatar}
-                  contentFit="cover"
-                />
-              )}
-              <View style={styles.commentUsernameContainer}>
-                {isAdmin ? (
-                  <AnimatedGradientText text={`@${comment.authorUsername || t('common.user')}`} style={styles.commentUsername} />
-                ) : (
-                  <Text style={[styles.commentUsername, { color: colors.orange[9] }]}>
-                    @{comment.authorUsername || t('common.user')}
-                  </Text>
-                )}
-              </View>
-              <Text style={[styles.commentDot, { color: colors.neutral[9] }]}>•</Text>
-              <Text style={[styles.commentTime, { color: colors.neutral[9] }]}>
-                {formatTimestamp(comment.createdAt, t)}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.moreButton}
-              onPress={() => setShowOptionsModal(true)}
-            >
-              <IconSymbol name="ellipsis" size={14} color={colors.neutral[9]} />
-            </TouchableOpacity>
-          </View>
-          
-          {/* Content */}
-          <Text style={[styles.commentContent, { color: colors.neutral[12] }]}>
-            {comment.content}
-          </Text>
-          
-          {/* Action pills */}
-          <View style={styles.commentActionsRow}>
-            <View style={styles.commentActionsLeft}>
-              <TouchableOpacity 
-                style={[
-                  styles.smallPillButton, 
-                  { 
-                    borderColor: isLiked ? colors.orange[6] : colors.neutral[6],
-                    backgroundColor: isLiked ? colors.orange[2] : 'transparent',
-                  }
-                ]}
-                onPress={handleLike}
-              >
-                <IconSymbol 
-                  name={isLiked ? "heart.fill" : "heart"} 
-                  size={14} 
-                  color={isLiked ? colors.orange[9] : colors.neutral[9]} 
-                />
-                <Text style={[
-                  styles.smallPillText, 
-                  { color: isLiked ? colors.orange[9] : colors.neutral[9] }
-                ]}>
-                  {comment.likesCount}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Right side: Responses pill with separator */}
-            <TouchableOpacity 
-              style={[styles.responsePill, { borderColor: colors.neutral[6] }]}
-              onPress={() => {
-                if (comment.repliesCount > 0) {
-                  setShowReplies(!showReplies);
-                } else {
-                  onReply?.();
-                }
-              }}
-            >
-              <IconSymbol name="message" size={14} color={colors.neutral[9]} />
-              <View style={[styles.pillSeparator, { backgroundColor: colors.neutral[6] }]} />
-              <Text style={[styles.responsePillText, { color: colors.neutral[9] }]}>
-                {comment.repliesCount > 0 
-                  ? `${comment.repliesCount} Comments`
-                  : 'Reply'
-                }
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-      
-      {/* Nested replies */}
-      {showReplies && comment.repliesCount > 0 && (
-        <View style={styles.repliesSection}>
-          <RepliesSection
-            postId={postId}
-            parentCommentId={comment.id}
-            onReplyToComment={onReplyToComment}
-            replyingToId={replyingToId}
-            currentUserId={currentUserId}
-            userProfile={userProfile}
-            onReport={onReport}
-            onDelete={onDelete}
-          />
-        </View>
-      )}
-      
-      {/* Comment Options Modal */}
-      <PostOptionsModal
-        visible={showOptionsModal}
-        isOwnPost={isOwnComment}
-        onClose={() => setShowOptionsModal(false)}
-        onDelete={handleDelete}
-        onReport={handleReport}
-      />
-    </View>
-  );
-}
+import { CommentItem } from './components';
+import { postToTweet } from './utils';
 
 export function PostDetailScreen() {
   const colors = useThemeColors();
@@ -560,6 +56,8 @@ export function PostDetailScreen() {
   const [postOptionsModalVisible, setPostOptionsModalVisible] = useState(false);
   const [sortBy, setSortBy] = useState<'latest' | 'mostLiked'>('latest');
   const [selectedComment, setSelectedComment] = useState<CommentDocument | null>(null);
+  const [avatarViewerVisible, setAvatarViewerVisible] = useState(false);
+  const [avatarViewerUri, setAvatarViewerUri] = useState<string | undefined>();
 
   // Fetch post data
   const { data: post, isLoading: isLoadingPost, refetch: refetchPost } = usePost(postId);
@@ -703,7 +201,7 @@ export function PostDetailScreen() {
           cancelButtonIndex: options.length,
           title: t('postDetail.sortComments'),
         },
-        (buttonIndex) => {
+        (buttonIndex: number) => {
           if (buttonIndex === 0) {
             setSortBy('latest');
           } else if (buttonIndex === 1) {
@@ -755,6 +253,12 @@ export function PostDetailScreen() {
   // Cancel reply
   const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
+  }, []);
+
+  // Handle avatar press
+  const handleAvatarPress = useCallback((avatarUri: string) => {
+    setAvatarViewerUri(avatarUri);
+    setAvatarViewerVisible(true);
   }, []);
   
   // Handle submit comment - optimistic update
@@ -848,9 +352,10 @@ export function PostDetailScreen() {
         userProfile={userProfile ?? undefined}
         onReport={handleCommentReport}
         onDelete={handleCommentDelete}
+        onAvatarPress={handleAvatarPress}
       />
     ),
-    [postId, handleReplyToComment, replyingTo, user?.uid, userProfile, handleCommentReport, handleCommentDelete]
+    [postId, handleReplyToComment, replyingTo, user?.uid, userProfile, handleCommentReport, handleCommentDelete, handleAvatarPress]
   );
   
   // Render footer
@@ -949,7 +454,7 @@ export function PostDetailScreen() {
         <FlatList
           data={comments}
           renderItem={renderComment}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: CommentDocument) => item.id}
           ListHeaderComponent={renderHeader}
           ListFooterComponent={renderFooter}
           ListEmptyComponent={renderEmpty}
@@ -1052,6 +557,14 @@ export function PostDetailScreen() {
           setSelectedComment(null);
         }}
       />
+      <AvatarViewerModal
+        visible={avatarViewerVisible}
+        avatarUri={avatarViewerUri}
+        onClose={() => {
+          setAvatarViewerVisible(false);
+          setAvatarViewerUri(undefined);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -1117,145 +630,8 @@ const styles = StyleSheet.create({
       fontWeight: '600',
     }),
   },
-  commentCardWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  commentCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  commentHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  commentUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  commentUsernameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  commentUsername: {
-    ...applyFont({
-      fontSize: 15,
-      fontWeight: '600',
-    }),
-  },
-  commentDot: {
-    marginHorizontal: 6,
-    ...applyFont({
-      fontSize: 14,
-    }),
-  },
-  commentTime: {
-    ...applyFont({
-      fontSize: 14,
-    }),
-  },
-  moreButton: {
-    padding: 4,
-  },
-  commentContent: {
-    ...applyFont({
-      fontSize: 15,
-    }),
-    lineHeight: 22,
-    marginBottom: 14,
-  },
-  commentActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  commentActionsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  smallPillButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 5,
-  },
-  smallPillText: {
-    ...applyFont({
-      fontSize: 13,
-      fontWeight: '500',
-    }),
-  },
-  responsePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 8,
-  },
-  pillSeparator: {
-    width: 1,
-    height: 14,
-  },
-  responsePillText: {
-    ...applyFont({
-      fontSize: 13,
-      fontWeight: '500',
-    }),
-  },
   repliesSection: {
     marginLeft: 24,
-  },
-  repliesContainer: {
-    // Container for replies
-  },
-  repliesLoading: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  repliesError: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  repliesErrorText: {
-    ...applyFont({
-      fontSize: 13,
-    }),
-  },
-  repliesEmpty: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  repliesEmptyText: {
-    ...applyFont({
-      fontSize: 13,
-    }),
-  },
-  loadMoreReplies: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  loadMoreText: {
-    ...applyFont({
-      fontSize: 13,
-      fontWeight: '500',
-    }),
   },
   emptyComments: {
     alignItems: 'center',
@@ -1273,6 +649,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     borderTopWidth: 1,
+    marginBottom: 16,
   },
   replyingToBar: {
     flexDirection: 'row',

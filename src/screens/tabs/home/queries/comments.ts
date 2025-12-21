@@ -62,7 +62,7 @@ export async function getPostComments(
   })) as CommentDocument[];
   
   const comments = allComments
-    .filter(c => !c.parentCommentId && !c.isDeleted && !c.isHidden && c.moderationChecked === true)
+    .filter(c => !c.parentCommentId && !c.isDeleted && !c.isHidden)
     .slice(0, COMMENTS_PER_PAGE);
   
   const newLastDoc = snapshot.docs.length > 0 
@@ -109,7 +109,7 @@ export async function getCommentReplies(
     })) as CommentDocument[];
     
     const comments = allComments
-      .filter(c => !c.isDeleted && !c.isHidden && c.moderationChecked === true)
+      .filter(c => !c.isDeleted && !c.isHidden)
       .slice(0, COMMENTS_PER_PAGE);
     
     console.log('getCommentReplies - filtered comments count:', comments.length);
